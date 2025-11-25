@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile Preview - SkillSwap</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <button class="top-bar-btn" id="back-button" onclick="window.location.href='/discover.html'">← Back</button>
+        </div>
+        <div class="top-bar-right">
+            <div class="user-avatar-dropdown">
+                <div class="avatar-circle"></div>
+                <span>▼</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🎓</span>
+                <span class="logo-text">SkillSwap</span>
+            </div>
+            <nav class="main-nav">
+                <a href="/discover.html">Discover</a>
+                <a href="/matches.html">Matches</a>
+                <a href="/messages.html">Messages</a>
+                <a href="/profile.html">Profile</a>
+                <a href="/login.html" id="login-link" style="display: none;">Login</a>
+                <a href="#" id="logout-link" style="display: none;">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content - Modern Compact Design -->
+    <main style="background: #f5f5f0; min-height: calc(100vh - 140px); padding: 2rem 0;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
+            <!-- Profile Header -->
+            <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem; overflow: hidden;">
+                <!-- Cover Photo -->
+                <div style="height: 180px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative;">
+                </div>
+                
+                <!-- Profile Info -->
+                <div style="padding: 0 2rem 2rem 2rem; margin-top: -70px; position: relative;">
+                    <div style="display: flex; align-items: flex-end; gap: 1.5rem; margin-bottom: 1rem;">
+                        <!-- Profile Picture -->
+                        <div style="width: 140px; height: 140px; border-radius: 50%; background: white; border: 4px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 3.5rem; flex-shrink: 0;">
+                            👤
+                        </div>
+                        
+                        <!-- Name and Info -->
+                        <div style="flex: 1; padding-bottom: 0.5rem;">
+                            <h1 style="font-size: 1.75rem; font-weight: 600; margin: 0 0 0.5rem 0; color: #1a1a1a;">
+                                <span id="profile-name">Loading...</span>
+                            </h1>
+                            <div style="color: #666; margin-bottom: 0.25rem; font-size: 0.95rem;">
+                                <span id="profile-title"></span>
+                            </div>
+                            <div style="color: #999; font-size: 0.875rem;">
+                                <span id="profile-location"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Edit Button (only show if viewing own profile) -->
+                        <div style="padding-bottom: 0.5rem;" id="edit-profile-button-container">
+                            <button class="btn btn-primary" onclick="window.location.href='/profile.html'" style="padding: 0.75rem 1.5rem;">
+                                Edit Profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem;">
+                <!-- Left Column -->
+                <div>
+                    <!-- About Section -->
+                    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem 0; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.5px;">About</h2>
+                        <p id="profile-bio" style="color: #333; line-height: 1.7; margin: 0; font-size: 0.95rem;"></p>
+                    </div>
+
+                    <!-- Career Goals -->
+                    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem 0; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.5px;">Career Goals</h2>
+                        <p id="profile-career-goals" style="color: #333; line-height: 1.7; margin: 0; font-size: 0.95rem;"></p>
+                    </div>
+
+                    <!-- Skills Section -->
+                    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem 0; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.5px;">Skills</h2>
+                        <div id="profile-skills" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div class="loading" style="color: #666;">Loading skills...</div>
+                        </div>
+                    </div>
+
+                    <!-- Interests Section -->
+                    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem 0; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.5px;">Interests</h2>
+                        <div id="profile-interests" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            <div class="loading" style="color: #666;">Loading interests...</div>
+                        </div>
+                    </div>
+
+                    <!-- Organizations Section -->
+                    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem 0; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.5px;">Organizations</h2>
+                        <div id="profile-organizations">
+                            <div class="loading" style="color: #666;">Loading organizations...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Sidebar -->
+                <div>
+                    <!-- Availability Card -->
+                    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem 0; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.5px;">Availability</h3>
+                        <div id="profile-availability" style="color: #333; font-size: 0.95rem;"></div>
+                    </div>
+
+                    <!-- Links Card -->
+                    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem 0; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.5px;">Links</h3>
+                        <div id="profile-links" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div class="loading" style="color: #666;">Loading links...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        let currentUserId = getCurrentUserId();
+        
+        // Get userId from URL query parameter, or use current user
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewUserId = urlParams.get('userId') ? parseInt(urlParams.get('userId')) : (currentUserId || 1);
+        const isViewingOwnProfile = currentUserId && viewUserId === currentUserId;
+
+        async function loadMyProfile() {
+            try {
+                const [users, profiles, userSkills, userInterests, userOrgs] = await Promise.all([
+                    fetch('/api/users').then(r => r.json()),
+                    fetch('/api/profiles').then(r => r.json()),
+                    fetch('/api/user-skills').then(r => r.json()).catch(() => []),
+                    fetch('/api/interests').then(r => r.json()).catch(() => []),
+                    fetch('/api/organizations').then(r => r.json()).catch(() => [])
+                ]);
+
+                const user = users.find(u => u.userId === viewUserId);
+                const profile = profiles.find(p => p.user?.userId === viewUserId);
+                const skills = userSkills.filter(s => s.user?.userId === viewUserId);
+                const interests = userInterests.filter(i => i.user?.userId === viewUserId);
+                const organizations = userOrgs.filter(o => o.user?.userId === viewUserId);
+
+                if (!user) {
+                    document.getElementById('profile-name').textContent = 'User not found';
+                    return;
+                }
+
+                // Update UI based on whether viewing own profile or someone else's
+                if (!isViewingOwnProfile) {
+                    // Hide edit button if viewing someone else's profile
+                    const editButtonContainer = document.getElementById('edit-profile-button-container');
+                    if (editButtonContainer) {
+                        editButtonContainer.style.display = 'none';
+                    }
+                } else {
+                    // Update back button to go to profile edit page when viewing own profile
+                    const backButton = document.getElementById('back-button');
+                    if (backButton) {
+                        backButton.onclick = () => window.location.href = '/profile.html';
+                        backButton.textContent = '← Back to Edit';
+                    }
+                }
+
+                // Set name and title
+                document.getElementById('profile-name').textContent = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User Name';
+                document.getElementById('profile-title').textContent = 
+                    `${profile?.major || 'No major'}${profile?.year ? ' · ' + profile.year : ''}`;
+                document.getElementById('profile-location').textContent = profile?.location || 'Location not set';
+                
+                // Set bio
+                const bioElement = document.getElementById('profile-bio');
+                if (profile?.bio) {
+                    bioElement.textContent = profile.bio;
+                } else {
+                    bioElement.textContent = 'No bio available yet. Add one in your profile settings!';
+                    bioElement.style.color = '#999';
+                }
+                
+                // Set career goals
+                const careerGoalsElement = document.getElementById('profile-career-goals');
+                if (profile?.careerGoals) {
+                    careerGoalsElement.textContent = profile.careerGoals;
+                } else {
+                    careerGoalsElement.textContent = 'No career goals specified yet.';
+                    careerGoalsElement.style.color = '#999';
+                }
+                
+                // Set availability
+                const availabilityElement = document.getElementById('profile-availability');
+                if (profile?.availability) {
+                    availabilityElement.textContent = profile.availability;
+                } else {
+                    availabilityElement.textContent = 'Not specified';
+                    availabilityElement.style.color = '#999';
+                }
+
+                // Display skills - Compact tag style
+                const skillsContainer = document.getElementById('profile-skills');
+                if (skills.length === 0) {
+                    skillsContainer.innerHTML = '<span style="color: #999; font-size: 0.9rem;">No skills added yet.</span>';
+                } else {
+                    skillsContainer.innerHTML = skills.map(skill => {
+                        const badges = [];
+                        if (skill.offering) badges.push('<span style="background: #28a745; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">Offering</span>');
+                        if (skill.seeking) badges.push('<span style="background: #667eea; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">Seeking</span>');
+                        return `
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <span style="background: #e9ecef; color: #495057; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500;">${skill.skillName}</span>
+                                ${skill.skillLevel ? `<span style="background: #e9ecef; color: #6c757d; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.875rem;">${skill.skillLevel}</span>` : ''}
+                                ${badges.join('')}
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Display interests - Compact tag style
+                const interestsContainer = document.getElementById('profile-interests');
+                if (interests.length === 0) {
+                    interestsContainer.innerHTML = '<span style="color: #999; font-size: 0.9rem;">No interests added yet.</span>';
+                } else {
+                    interestsContainer.innerHTML = interests.map(interest => `
+                        <span style="background: #e9ecef; color: #495057; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.875rem; display: inline-block;">
+                            ${interest.interestName}
+                        </span>
+                    `).join('');
+                }
+
+                // Display organizations - Compact list
+                const orgsContainer = document.getElementById('profile-organizations');
+                if (organizations.length === 0) {
+                    orgsContainer.innerHTML = '<span style="color: #999; font-size: 0.9rem;">No organizations added yet.</span>';
+                } else {
+                    orgsContainer.innerHTML = organizations.map(org => `
+                        <div style="padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0;">
+                            <div style="font-weight: 500; color: #1a1a1a; margin-bottom: 0.25rem; font-size: 0.9rem;">${org.organizationName}</div>
+                            ${org.role ? '<div style="color: #666; font-size: 0.85rem;">' + org.role + '</div>' : ''}
+                        </div>
+                    `).join('');
+                }
+
+                // Display social links - Clean list with icons
+                const linksContainer = document.getElementById('profile-links');
+                const links = [];
+                if (profile?.linkedin) {
+                    links.push(`<a href="${profile.linkedin}" target="_blank" style="color: #0077b5; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; padding: 0.5rem 0; transition: color 0.2s;"><span>🔗</span> <span>LinkedIn</span></a>`);
+                }
+                if (profile?.github) {
+                    links.push(`<a href="${profile.github}" target="_blank" style="color: #333; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; padding: 0.5rem 0; transition: color 0.2s;"><span>💻</span> <span>GitHub</span></a>`);
+                }
+                if (profile?.portfolio) {
+                    links.push(`<a href="${profile.portfolio}" target="_blank" style="color: #667eea; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; padding: 0.5rem 0; transition: color 0.2s;"><span>🌐</span> <span>Portfolio</span></a>`);
+                }
+                
+                if (links.length === 0) {
+                    linksContainer.innerHTML = '<span style="color: #999; font-size: 0.9rem;">No links added yet.</span>';
+                } else {
+                    linksContainer.innerHTML = links.join('');
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                document.getElementById('profile-name').textContent = 'Error loading profile';
+            }
+        }
+
+        loadMyProfile();
+    </script>
+</body>
+</html>

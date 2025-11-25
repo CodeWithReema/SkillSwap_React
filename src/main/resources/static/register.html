@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - SkillSwap</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-container">
+            <h1>SkillSwap</h1>
+            <h2>Create Account</h2>
+            
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" name="firstName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" name="lastName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="university">University</label>
+                    <input type="text" id="university" name="university" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+            
+            <p class="auth-link">
+                Already have an account? <a href="/login.html">Login here</a>
+            </p>
+            
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <div id="success-message" class="success-message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userData = {
+                email: document.getElementById('email').value,
+                passwordHash: document.getElementById('password').value, // TODO: Hash this properly
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                university: document.getElementById('university').value
+            };
+            
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('success-message').textContent = 'Registration successful!';
+                    document.getElementById('success-message').style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/login.html';
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    document.getElementById('error-message').textContent = error.message || 'Registration failed';
+                    document.getElementById('error-message').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('error-message').textContent = 'Error: ' + error.message;
+                document.getElementById('error-message').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+

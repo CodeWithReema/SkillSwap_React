@@ -2,8 +2,8 @@
 #  SkillSwap Spring Boot Dockerfile
 # ============================
 
-# Use OpenJDK 21 for runtime
-FROM openjdk:21-jdk-slim AS build
+# Use Eclipse Temurin (Adoptium) OpenJDK 21 for runtime
+FROM eclipse-temurin:21-jdk-jammy AS build
 
 # Set working directory
 WORKDIR /app
@@ -25,7 +25,7 @@ RUN ./mvnw clean package -DskipTests
 # ----------------------------
 # Runtime stage
 # ----------------------------
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jre-jammy
 
 # Working directory inside the container
 WORKDIR /app

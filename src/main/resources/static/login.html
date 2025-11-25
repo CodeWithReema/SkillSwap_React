@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SkillSwap</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <button class="top-bar-btn">Copy</button>
+            <button class="top-bar-btn">Publish</button>
+        </div>
+        <div class="top-bar-right">
+            <div class="user-avatar-dropdown">
+                <div class="avatar-circle"></div>
+                <span>▼</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🎓</span>
+                <span class="logo-text">SkillSwap</span>
+            </div>
+            <nav class="main-nav">
+                <a href="/index.html">Home</a>
+                <a href="/discover.html">Discover</a>
+                <a href="/matches.html">Matches</a>
+                <a href="/profile.html">Profile</a>
+                <a href="/login.html" class="active" id="login-link">Login</a>
+                <a href="#" id="logout-link" style="display: none;">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container" style="padding: 4rem 2rem;">
+        <div class="auth-container">
+            <h1>SkillSwap</h1>
+            <h2>Login</h2>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+            </form>
+            
+            <p class="auth-link">
+                Don't have an account? <a href="/register.html">Register here</a>
+            </p>
+            
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <div id="success-message" class="success-message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+            
+            // Hide previous messages
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            try {
+                // Get all users and find matching email
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                
+                const user = users.find(u => u.email === email);
+                
+                if (!user) {
+                    errorDiv.textContent = 'Invalid email or password.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
+                // TODO: When authentication is implemented, verify password hash here
+                // For now, we'll just check if email exists
+                // In production, you'd verify: bcrypt.compare(password, user.passwordHash)
+                
+                // Store user in localStorage
+                setCurrentUser(user);
+                
+                // Show success and redirect
+                successDiv.textContent = 'Login successful! Redirecting...';
+                successDiv.style.display = 'block';
+                
+                // Update UI
+                updateAuthUI();
+                
+                // Redirect to discover page
+                setTimeout(() => {
+                    window.location.href = '/discover.html';
+                }, 1000);
+                
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

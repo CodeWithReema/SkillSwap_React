@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matches - SkillSwap</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <button class="top-bar-btn">Copy</button>
+            <button class="top-bar-btn">Publish</button>
+        </div>
+        <div class="top-bar-right">
+            <div class="notification-bell">
+                🔔
+                <span class="notification-badge" id="notification-count">0</span>
+            </div>
+            <div class="user-avatar-dropdown">
+                <div class="avatar-circle"></div>
+                <span>▼</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🎓</span>
+                <span class="logo-text">SkillSwap</span>
+            </div>
+            <nav class="main-nav">
+                <a href="/discover.html">Discover</a>
+                <a href="/matches.html" class="active">Matches</a>
+                <a href="/messages.html">Messages</a>
+                <a href="/profile.html">Profile</a>
+                <a href="/login.html" id="login-link" style="display: none;">Login</a>
+                <a href="#" id="logout-link" style="display: none;">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
+        <h1 style="margin-bottom: 2rem;">Your Matches</h1>
+        
+        <div id="matches-list" class="matches-list">
+            <div class="loading">Loading matches...</div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        let currentUserId = getCurrentUserId();
+
+        async function loadMatches() {
+            try {
+                const response = await fetch('/api/matches');
+                const matches = await response.json();
+                
+                const container = document.getElementById('matches-list');
+                
+                if (matches.length === 0) {
+                    container.innerHTML = '<div class="empty-state" style="text-align: center; padding: 3rem; color: #666;">No matches yet. Start swiping to find connections!</div>';
+                    return;
+                }
+                
+                // Get all users to display match info
+                const usersResponse = await fetch('/api/users');
+                const allUsers = await usersResponse.json();
+                
+                // Get all profiles
+                const profilesResponse = await fetch('/api/profiles');
+                const allProfiles = await profilesResponse.json();
+                
+                container.innerHTML = matches.map(match => {
+                    const otherUser = match.user1.userId === currentUserId ? match.user2 : match.user1;
+                    const user = allUsers.find(u => u.userId === otherUser.userId);
+                    const profile = allProfiles.find(p => p.user?.userId === otherUser.userId);
+                    
+                    if (!user) return '';
+                    
+                    return `
+                        <div class="match-card" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1rem;">
+                            <div class="match-avatar" style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); flex-shrink: 0;"></div>
+                            <div style="flex: 1;">
+                                <h3 style="margin-bottom: 0.5rem;">${user.firstName || ''} ${user.lastName || ''}</h3>
+                                <p style="color: #666; margin-bottom: 0.5rem;">${user.university || 'No university'}</p>
+                                <p style="color: #999; font-size: 0.875rem;">Matched on ${new Date(match.matchedAt).toLocaleDateString()}</p>
+                            </div>
+                            <a href="/messages.html?matchId=${match.matchId}" class="btn btn-primary">Message</a>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                document.getElementById('matches-list').innerHTML = 
+                    '<div class="error">Error loading matches: ' + error.message + '</div>';
+            }
+        }
+
+        // Update notification count
+        async function updateNotificationCount() {
+            try {
+                const matchesResponse = await fetch('/api/matches');
+                const matches = await matchesResponse.json();
+                document.getElementById('notification-count').textContent = matches.length;
+            } catch (error) {
+                console.error('Error updating notifications:', error);
+            }
+        }
+
+        loadMatches();
+        updateNotificationCount();
+    </script>
+</body>
+</html>

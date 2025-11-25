@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discover - SkillSwap</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <button class="top-bar-btn">Copy</button>
+            <button class="top-bar-btn">Publish</button>
+        </div>
+        <div class="top-bar-right">
+            <div class="notification-bell">
+                🔔
+                <span class="notification-badge">3</span>
+            </div>
+            <div class="user-avatar-dropdown">
+                <div class="avatar-circle"></div>
+                <span>▼</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🎓</span>
+                <span class="logo-text">SkillSwap</span>
+            </div>
+            <nav class="main-nav">
+                <a href="/discover.html" class="active">Discover</a>
+                <a href="/matches.html">Matches</a>
+                <a href="/messages.html">Messages</a>
+                <a href="/profile.html">Profile</a>
+                <a href="/login.html" id="login-link" style="display: none;">Login</a>
+                <a href="#" id="logout-link" style="display: none;">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content - Three Column Layout -->
+    <main class="discover-main">
+        <!-- Left Sidebar - Filters and Stats -->
+        <aside class="left-sidebar">
+            <div class="filter-section">
+                <h3>Year</h3>
+                <div class="filter-pills">
+                    <button class="filter-pill" data-year="Freshman">Freshman</button>
+                    <button class="filter-pill" data-year="Sophomore">Sophomore</button>
+                    <button class="filter-pill" data-year="Junior">Junior</button>
+                    <button class="filter-pill" data-year="Senior">Senior</button>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h3>Interests</h3>
+                <div class="filter-pills">
+                    <button class="filter-pill" data-interest="Tech">
+                        <span class="icon">💻</span> Tech
+                    </button>
+                    <button class="filter-pill" data-interest="Art">
+                        <span class="icon">🎨</span> Art
+                    </button>
+                    <button class="filter-pill" data-interest="Music">
+                        <span class="icon">🎵</span> Music
+                    </button>
+                    <button class="filter-pill" data-interest="Sports">
+                        <span class="icon">🏀</span> Sports
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <h3>YOUR STATS</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Total Matches</span>
+                    <span class="stat-value" id="total-matches">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Active Chats</span>
+                    <span class="stat-value" id="active-chats">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Profile Views</span>
+                    <span class="stat-value" id="profile-views">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Skill Swaps</span>
+                    <span class="stat-value" id="skill-swaps">0</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center - Profile Card -->
+        <section class="center-content">
+            <div class="profile-card-wrapper">
+                <div id="user-card-container" class="profile-card">
+                    <div class="loading">Loading users...</div>
+                </div>
+                
+                <!-- Pagination Dots -->
+                <div class="pagination-dots" id="pagination-dots" style="display: none;">
+                    <span class="dot active"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+                
+                <!-- Swipe Buttons -->
+                <div class="swipe-buttons-container" id="swipe-buttons-container" style="display: none;">
+                    <button class="swipe-btn swipe-btn-pass" onclick="swipeLeft()">
+                        <span class="swipe-icon">✕</span>
+                        <span class="swipe-text">PASS</span>
+                    </button>
+                    <button class="swipe-btn swipe-btn-like" onclick="swipeRight()">
+                        <span class="swipe-icon">❤️</span>
+                        <span class="swipe-text">LIKE</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Sidebar - Notifications and Matches -->
+        <aside class="right-sidebar">
+            <div class="notification-card">
+                <div class="notification-avatar"></div>
+                <div class="notification-content">
+                    <div class="notification-header">
+                        <strong>James Wilson</strong>
+                        <span class="notification-dot"></span>
+                    </div>
+                    <p class="notification-text">Thanks for the tips!</p>
+                </div>
+            </div>
+
+            <button class="view-matches-btn" onclick="window.location.href='/matches.html'">
+                View All Matches
+            </button>
+        </aside>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        let currentUsers = [];
+        let currentIndex = 0;
+        let currentUserId = getCurrentUserId();
+        let swipedUserIds = new Set();
+        let activeFilters = {
+            years: [],
+            interests: []
+        };
+
+        // Load stats on page load
+        async function loadStats() {
+            try {
+                const [matches, swipes] = await Promise.all([
+                    fetch('/api/matches').then(r => r.json()),
+                    fetch(`/api/swipes/user/${currentUserId}`).then(r => r.json())
+                ]);
+
+                document.getElementById('total-matches').textContent = matches.length;
+                document.getElementById('active-chats').textContent = matches.length; // Simplified
+                document.getElementById('profile-views').textContent = '0'; // TODO: Implement
+                document.getElementById('skill-swaps').textContent = '0'; // TODO: Implement
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load users excluding already swiped ones
+        async function loadUsers() {
+            try {
+                // Get all users
+                const usersResponse = await fetch('/api/users');
+                const allUsers = await usersResponse.json();
+
+                // Get swiped users
+                const swipesResponse = await fetch(`/api/swipes/user/${currentUserId}`);
+                const swipes = await swipesResponse.json();
+                
+                swipedUserIds.clear();
+                swipes.forEach(swipe => {
+                    swipedUserIds.add(swipe.swipee.userId);
+                });
+
+                // Filter out current user and already swiped users
+                currentUsers = allUsers.filter(user => 
+                    user.userId !== currentUserId && !swipedUserIds.has(user.userId)
+                );
+
+                // Apply year filter if any selected
+                if (activeFilters.years.length > 0) {
+                    // TODO: Filter by profile year when profile data is available
+                }
+
+                // Apply interest filter if any selected
+                if (activeFilters.interests.length > 0) {
+                    // TODO: Filter by interests when interest data is available
+                }
+
+                currentIndex = 0;
+                displayCurrentUser();
+            } catch (error) {
+                document.getElementById('user-card-container').innerHTML = 
+                    '<div class="error">Error loading users: ' + error.message + '</div>';
+            }
+        }
+
+        function displayCurrentUser() {
+            const container = document.getElementById('user-card-container');
+            
+            if (currentIndex >= currentUsers.length) {
+                container.innerHTML = '<div class="empty-state">No more users to show! Check back later for new profiles.</div>';
+                document.getElementById('pagination-dots').style.display = 'none';
+                document.getElementById('swipe-buttons-container').style.display = 'none';
+                return;
+            }
+
+            const user = currentUsers[currentIndex];
+            const age = user.dateOfBirth ? new Date().getFullYear() - new Date(user.dateOfBirth).getFullYear() : '';
+            
+            // Load profile data if available
+            loadUserProfile(user.userId).then(profile => {
+                container.innerHTML = `
+                    <button class="view-full-profile-btn" onclick="viewFullProfile(${user.userId})">View Full Profile ></button>
+                    <div class="profile-image-placeholder">
+                        <div class="avatar-large"></div>
+                    </div>
+                    <div class="profile-info">
+                        <h2 class="profile-name">${user.firstName || ''} ${user.lastName || ''}${age ? ', ' + age : ''}</h2>
+                        <div class="profile-details">
+                            <div class="detail-item">
+                                <span class="detail-icon">💻</span>
+                                <span>${profile?.major || 'Not specified'}, ${profile?.year || 'Not specified'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">🎓</span>
+                                <span>${user.university || 'State University'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">📍</span>
+                                <span>${profile?.location || 'Location not set'}</span>
+                            </div>
+                        </div>
+                        <div class="about-section">
+                            <h3>ABOUT</h3>
+                            <p>${profile?.bio || 'No bio available yet.'}</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('pagination-dots').style.display = 'flex';
+                document.getElementById('swipe-buttons-container').style.display = 'flex';
+            });
+        }
+
+        async function loadUserProfile(userId) {
+            try {
+                const profiles = await fetch('/api/profiles').then(r => r.json());
+                return profiles.find(p => p.user?.userId === userId);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        async function swipeLeft() {
+            if (currentIndex >= currentUsers.length) return;
+            
+            const currentUser = currentUsers[currentIndex];
+            await performSwipe(currentUser.userId, false);
+            currentIndex++;
+            displayCurrentUser();
+        }
+
+        async function swipeRight() {
+            if (currentIndex >= currentUsers.length) return;
+            
+            const currentUser = currentUsers[currentIndex];
+            await performSwipe(currentUser.userId, true);
+            currentIndex++;
+            displayCurrentUser();
+        }
+
+        async function performSwipe(swipeeId, isLike) {
+            try {
+                const swipeData = {
+                    swiper: { userId: currentUserId },
+                    swipee: { userId: swipeeId },
+                    isLike: isLike
+                };
+
+                const response = await fetch('/api/swipes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(swipeData)
+                });
+
+                if (response.ok) {
+                    const swipe = await response.json();
+                    swipedUserIds.add(swipeeId);
+                    
+                    // If it was a like and we got a match, show notification
+                    if (isLike) {
+                        // Check if match was created (backend handles this)
+                        setTimeout(() => loadStats(), 500); // Refresh stats
+                    }
+                } else {
+                    console.error('Swipe failed:', await response.text());
+                }
+            } catch (error) {
+                console.error('Error performing swipe:', error);
+            }
+        }
+
+        function viewFullProfile(userId) {
+            // Navigate to profile page with userId query parameter
+            window.location.href = `/view-profile.html?userId=${userId}`;
+        }
+
+        // Filter pill click handlers
+        document.querySelectorAll('.filter-pill[data-year]').forEach(pill => {
+            pill.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const year = this.dataset.year;
+                if (this.classList.contains('active')) {
+                    activeFilters.years.push(year);
+                } else {
+                    activeFilters.years = activeFilters.years.filter(y => y !== year);
+                }
+                loadUsers();
+            });
+        });
+
+        document.querySelectorAll('.filter-pill[data-interest]').forEach(pill => {
+            pill.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const interest = this.dataset.interest;
+                if (this.classList.contains('active')) {
+                    activeFilters.interests.push(interest);
+                } else {
+                    activeFilters.interests = activeFilters.interests.filter(i => i !== interest);
+                }
+                loadUsers();
+            });
+        });
+
+        // Keyboard shortcuts for swiping
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                swipeLeft();
+            } else if (e.key === 'ArrowRight') {
+                swipeRight();
+            }
+        });
+
+        // Load on page load
+        loadStats();
+        loadUsers();
+    </script>
+</body>
+</html>
+
