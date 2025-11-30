@@ -147,10 +147,17 @@
             <scope>test</scope>
         </dependency>
 
-		<!-- Spring Boot Testcontainers integration -->
-		<dependency>
-    		<groupId>org.springframework.boot</groupId>
-    		<artifactId>spring-boot-testcontainers</artifactId>
+        <!-- In-memory DB for lightweight test profile (avoid Docker in local/CI) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Spring Boot Testcontainers integration -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
     		<scope>test</scope>
 		</dependency>
 
