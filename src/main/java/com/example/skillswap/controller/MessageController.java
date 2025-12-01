@@ -29,7 +29,7 @@ public class MessageController {
         this.userRepo = userRepo;
     }
 
-    // Get all messages for a given match (clearer path)
+    // ✅ Get all messages for a given match (clearer path)
     @GetMapping("/match/{matchId}")
     public List<Message> getMessagesByMatch(@PathVariable Long matchId) {
         if (!matchRepo.existsById(matchId)) {
@@ -38,13 +38,26 @@ public class MessageController {
         return messageRepo.findByMatchMatchIdOrderBySentAtAsc(matchId);
     }
 
-    // Backwards-compatible endpoint if frontend calls /api/messages/{matchId}
+    // ✅ Backwards-compatible endpoint if frontend calls /api/messages/{matchId}
     @GetMapping("/{matchId}")
     public List<Message> getMessagesByMatchLegacy(@PathVariable Long matchId) {
         return getMessagesByMatch(matchId);
     }
 
-    // Send a message (linked to match + sender) with basic validation
+    // ✅ New: Get the latest (most recent) message for a match
+    @GetMapping("/match/{matchId}/latest")
+    public Message getLatestMessageForMatch(@PathVariable Long matchId) {
+        if (!matchRepo.existsById(matchId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Match not found");
+        }
+        Message latest = messageRepo.findTop1ByMatchMatchIdOrderBySentAtDesc(matchId);
+        if (latest == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No messages found for this match");
+        }
+        return latest;
+    }
+
+    // ✅ Send a message (linked to match + sender) with basic validation
     @PostMapping
     public Message sendMessage(@RequestBody Message incoming) {
 
@@ -85,12 +98,31 @@ public class MessageController {
         return messageRepo.save(message);
     }
 
-    // Mark message as read
+    // ✅ Mark a single message as read
     @PutMapping("/{id}/read")
     public Message markAsRead(@PathVariable Long id) {
         Message msg = messageRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Message not found"));
         msg.setIsRead(true);
         return messageRepo.save(msg);
+    }
+
+    // ✅ New: Mark ALL messages in a match as read (e.g., when user opens the conversation)
+    @PutMapping("/match/{matchId}/read")
+    public List<Message> markAllAsReadForMatch(@PathVariable Long matchId) {
+        if (!matchRepo.existsById(matchId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Match not found");
+        }
+
+        List<Message> messages = messageRepo.findByMatchMatchIdOrderBySentAtAsc(matchId);
+        if (messages.isEmpty()) {
+            return messages; // nothing to update, but not an error
+        }
+
+        for (Message m : messages) {
+            m.setIsRead(true);
+        }
+
+        return messageRepo.saveAll(messages);
     }
 }

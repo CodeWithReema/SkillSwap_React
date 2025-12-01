@@ -24,13 +24,24 @@ public class Message {
     private String messageContent;
 
     @Column(name = "is_read")
-    private Boolean isRead = false;
+    private Boolean isRead;
 
     @Column(name = "sent_at")
-    private LocalDateTime sentAt = LocalDateTime.now();
+    private LocalDateTime sentAt;
 
     // Constructors
     public Message() {}
+
+    // Lifecycle hook to ensure defaults are set on insert
+    @PrePersist
+    public void prePersist() {
+        if (sentAt == null) {
+            sentAt = LocalDateTime.now();
+        }
+        if (isRead == null) {
+            isRead = false;
+        }
+    }
 
     // Getters & Setters
     public Long getMessageId() { return messageId; }
