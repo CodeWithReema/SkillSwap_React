@@ -59,56 +59,61 @@ export default function Login() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <Text style={styles.icon}>🎓</Text>
+          </View>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue to SkillSwap</Text>
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email"
-                placeholderTextColor={theme.colors.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                autoCorrect={false}
-              />
+          <View style={styles.glassCard}>
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email"
+                  placeholderTextColor={theme.colors.textMuted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter your password"
+                  placeholderTextColor={theme.colors.textMuted}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.button, styles.buttonPrimary, loading && styles.buttonDisabled]}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.linkButton}
+                onPress={() => router.push('/register')}
+              >
+                <Text style={styles.linkText}>
+                  Don't have an account? <Text style={styles.linkTextBold}>Sign up</Text>
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor={theme.colors.textMuted}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password"
-                autoCorrect={false}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, styles.buttonPrimary, loading && styles.buttonDisabled]}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => router.push('/register')}
-            >
-              <Text style={styles.linkText}>
-                Don't have an account? <Text style={styles.linkTextBold}>Sign up</Text>
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -131,18 +136,40 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     alignSelf: 'center',
   },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: theme.borderRadius.xxxl,
+    backgroundColor: theme.colors.accentPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.glow,
+  },
+  icon: {
+    fontSize: 40,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xl,
     textAlign: 'center',
+  },
+  glassCard: {
+    backgroundColor: theme.colors.bgCard,
+    borderRadius: theme.borderRadius.xxxl,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    ...theme.shadows.glass,
   },
   form: {
     gap: theme.spacing.lg,
@@ -152,26 +179,27 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   input: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: theme.colors.bgCard,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.xxxl,
     padding: theme.spacing.md,
     color: theme.colors.textPrimary,
-    fontSize: 16, // Prevents zoom on iOS
+    fontSize: 16,
   },
   button: {
     padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.xxxl,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonPrimary: {
     backgroundColor: theme.colors.accentPrimary,
+    ...theme.shadows.glass,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -179,7 +207,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   linkButton: {
     marginTop: theme.spacing.sm,
@@ -191,7 +219,6 @@ const styles = StyleSheet.create({
   },
   linkTextBold: {
     color: theme.colors.accentPrimary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
-

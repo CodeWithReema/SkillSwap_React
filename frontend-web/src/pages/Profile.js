@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import {
   userAPI,
@@ -11,7 +12,6 @@ import {
   cityAPI,
   API_BASE_URL,
 } from '../services/api';
-import './Profile.css';
 
 const Profile = () => {
   const { getCurrentUserId, updateUser } = useAuth();
@@ -47,10 +47,20 @@ const Profile = () => {
   const [locationStatus, setLocationStatus] = useState('');
   const [locationDebounceTimer, setLocationDebounceTimer] = useState(null);
 
+  // Add/Edit states
+  const [showAddSkill, setShowAddSkill] = useState(false);
+  const [newSkill, setNewSkill] = useState({ skillName: '', skillLevel: 'Intermediate', offering: false, seeking: false });
+  const [showAddInterest, setShowAddInterest] = useState(false);
+  const [newInterest, setNewInterest] = useState({ interestName: '', category: '' });
+  const [showAddOrg, setShowAddOrg] = useState(false);
+  const [newOrg, setNewOrg] = useState({ organizationName: '', role: '' });
+  const [showAddLanguage, setShowAddLanguage] = useState(false);
+  const [newLanguage, setNewLanguage] = useState({ languageName: '', proficiencyLevel: 'Native' });
+
   const toAbsoluteUrl = (url) => {
     if (!url) return '';
     try {
-      const base = API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+      const base = process.env.REACT_APP_API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
       return new URL(url, base).toString();
     } catch (e) {
       return url;
@@ -70,7 +80,6 @@ const Profile = () => {
         isPrimary: Boolean(photo.isPrimary),
       }))
       .sort((a, b) => {
-        // Primary first, then newest upload
         if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
         const aDate = a.uploadedAt ? new Date(a.uploadedAt) : 0;
         const bDate = b.uploadedAt ? new Date(b.uploadedAt) : 0;
@@ -127,7 +136,6 @@ const Profile = () => {
           setLocationStatus('Location set');
         }
 
-        // Load photos
         try {
           const profilePhotos = await photoAPI.getByProfile(currentProfile.profileId);
           setPhotos(normalizePhotos(profilePhotos));
@@ -136,7 +144,6 @@ const Profile = () => {
         }
       }
 
-      // Load related data
       setSkills(userSkills.filter(s => s.user?.userId === userId));
       setInterests(userInterests.filter(i => i.user?.userId === userId));
       setOrganizations(userOrgs.filter(o => o.user?.userId === userId));
@@ -160,7 +167,6 @@ const Profile = () => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, location: value }));
 
-    // Clear previous timer
     if (locationDebounceTimer) {
       clearTimeout(locationDebounceTimer);
     }
@@ -171,7 +177,6 @@ const Profile = () => {
       return;
     }
 
-    // Debounce the API call
     const timer = setTimeout(async () => {
       try {
         const suggestions = await cityAPI.getSuggestions(value);
@@ -187,7 +192,7 @@ const Profile = () => {
         setLocationSuggestions([]);
         setShowLocationSuggestions(false);
       }
-    }, 300); // 300ms debounce
+    }, 300);
 
     setLocationDebounceTimer(timer);
   };
@@ -196,14 +201,12 @@ const Profile = () => {
     setFormData(prev => ({ ...prev, location }));
     setShowLocationSuggestions(false);
     setLocationSuggestions([]);
-    // Clear debounce timer
     if (locationDebounceTimer) {
       clearTimeout(locationDebounceTimer);
       setLocationDebounceTimer(null);
     }
   };
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (locationDebounceTimer) {
@@ -225,7 +228,6 @@ const Profile = () => {
         const lon = position.coords.longitude;
 
         try {
-          // Reverse geocode
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`,
             { headers: { 'User-Agent': 'SkillSwap/1.0' } }
@@ -242,7 +244,6 @@ const Profile = () => {
           const locationText = cityName || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
           setFormData(prev => ({ ...prev, location: locationText }));
 
-          // Update location in backend
           const userId = getCurrentUserId();
           const locationData = {
             latitude: lat,
@@ -279,7 +280,6 @@ const Profile = () => {
     try {
       const userId = getCurrentUserId();
 
-      // Update user
       const updatedUser = await userAPI.update(userId, {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -287,7 +287,6 @@ const Profile = () => {
       updateUser(updatedUser);
       setUser(updatedUser);
 
-      // Update or create profile
       const profileData = {
         user: updatedUser,
         ...formData,
@@ -328,10 +327,6 @@ const Profile = () => {
     }
   };
 
-  // Skill management
-  const [showAddSkill, setShowAddSkill] = useState(false);
-  const [newSkill, setNewSkill] = useState({ skillName: '', skillLevel: 'Intermediate', offering: false, seeking: false });
-
   const addSkill = async () => {
     try {
       await userSkillAPI.create({
@@ -356,10 +351,6 @@ const Profile = () => {
       }
     }
   };
-
-  // Interest management
-  const [showAddInterest, setShowAddInterest] = useState(false);
-  const [newInterest, setNewInterest] = useState({ interestName: '', category: '' });
 
   const addInterest = async () => {
     try {
@@ -386,10 +377,6 @@ const Profile = () => {
     }
   };
 
-  // Organization management
-  const [showAddOrg, setShowAddOrg] = useState(false);
-  const [newOrg, setNewOrg] = useState({ organizationName: '', role: '' });
-
   const addOrganization = async () => {
     try {
       await userOrganizationAPI.create({
@@ -414,10 +401,6 @@ const Profile = () => {
       }
     }
   };
-
-  // Language management
-  const [showAddLanguage, setShowAddLanguage] = useState(false);
-  const [newLanguage, setNewLanguage] = useState({ languageName: '', proficiencyLevel: 'Native' });
 
   const addLanguage = async () => {
     try {
@@ -446,57 +429,93 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="profile-loading">
-        <div className="spinner"></div>
+      <div className="min-h-screen flex items-center justify-center relative">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-glass-accent-primary rounded-full mix-blend-screen opacity-20 blur-3xl animate-pulse-slow"></div>
+        </div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-glass-accent-primary relative z-10"></div>
       </div>
     );
   }
 
   return (
-    <div className="profile-container">
-      <div className="profile-header">
-        <h1>Edit Profile</h1>
-        {locationStatus && (
-          <div className={`status-message ${locationStatus.includes('Error') ? 'error' : 'success'}`}>
-            {locationStatus}
-          </div>
-        )}
+    <div className="min-h-screen py-12 relative">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-glass-accent-primary rounded-full mix-blend-screen opacity-10 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-glass-accent-secondary rounded-full mix-blend-screen opacity-10 blur-3xl"></div>
       </div>
 
-      <form onSubmit={handleSubmit} className="profile-form">
-        <div className="profile-grid">
-          {/* Left Column */}
-          <div className="profile-column">
-            {/* Profile Photo */}
-            <div className="profile-section">
-              <h3>Profile Photo</h3>
-              <div className="photo-upload-area">
+      <div className="container mx-auto px-6 relative z-10">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-10"
+        >
+          <h1 className="text-6xl font-bold text-glass-text-primary mb-4 bg-gradient-primary bg-clip-text text-transparent">
+            Edit Profile
+          </h1>
+          {locationStatus && (
+            <div className={`inline-block px-5 py-3 rounded-2xl text-sm mb-4 backdrop-blur-sm shadow-glass ${
+              locationStatus.includes('Error') 
+                ? 'bg-glass-accent-danger/20 text-glass-accent-danger border border-glass-accent-danger' 
+                : 'bg-glass-accent-success/20 text-glass-accent-success border border-glass-accent-success'
+            }`}>
+              {locationStatus}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Split Panel Layout - Completely Different */}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Profile Photo & Quick Info */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Profile Photo - Large, Centered */}
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="glass-card floating-card text-center"
+            >
+              <div className="mb-6">
                 {photos.length > 0 && photos[0]?.photoUrl ? (
-                  <img src={photos[0].photoUrl} alt="Profile" className="profile-photo-preview" />
+                  <img 
+                    src={photos[0].photoUrl} 
+                    alt="Profile" 
+                    className="w-48 h-48 rounded-3xl object-cover border-2 border-glass-border shadow-glass-xl mx-auto"
+                  />
                 ) : (
-                  <div className="photo-placeholder">
+                  <div className="w-48 h-48 rounded-3xl bg-gradient-primary flex items-center justify-center text-6xl font-bold text-white border-2 border-glass-border shadow-glass-xl mx-auto">
                     {user?.firstName?.[0]}{user?.lastName?.[0]}
                   </div>
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="photo-input"
-                  id="photo-upload"
-                />
-                <label htmlFor="photo-upload" className="btn btn-secondary">
-                  Upload Photo
-                </label>
               </div>
-            </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                id="photo-upload"
+              />
+              <label htmlFor="photo-upload" className="btn btn-secondary cursor-pointer w-full">
+                Upload Photo
+              </label>
+            </motion.div>
+          </div>
 
+          {/* Right Column - Main Form Content */}
+          <div className="lg:col-span-2 space-y-6">
             {/* Basic Information */}
-            <div className="profile-section">
-              <h3>Basic Information</h3>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>First Name</label>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card"
+            >
+              <h2 className="text-2xl font-bold text-glass-text-primary mb-6 flex items-center gap-3">
+                <span className="text-2xl">👤</span>
+                Basic Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-glass-text-secondary mb-2">First Name</label>
                   <input
                     type="text"
                     name="firstName"
@@ -506,8 +525,8 @@ const Profile = () => {
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>Last Name</label>
+                <div>
+                  <label className="block text-sm font-medium text-glass-text-secondary mb-2">Last Name</label>
                   <input
                     type="text"
                     name="lastName"
@@ -517,23 +536,19 @@ const Profile = () => {
                     required
                   />
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label>Bio</label>
-                <textarea
-                  name="bio"
-                  className="textarea"
-                  value={formData.bio}
-                  onChange={handleChange}
-                  rows="4"
-                  placeholder="Tell us about yourself..."
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Major</label>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-glass-text-secondary mb-2">Bio</label>
+                  <textarea
+                    name="bio"
+                    className="input min-h-[100px] resize-none"
+                    value={formData.bio}
+                    onChange={handleChange}
+                    placeholder="Tell us about yourself..."
+                    rows="4"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-glass-text-secondary mb-2">Major</label>
                   <input
                     type="text"
                     name="major"
@@ -543,9 +558,9 @@ const Profile = () => {
                     placeholder="e.g., Computer Science"
                   />
                 </div>
-                <div className="form-group">
-                  <label>Year</label>
-                  <select name="year" className="select" value={formData.year} onChange={handleChange}>
+                <div>
+                  <label className="block text-sm font-medium text-glass-text-secondary mb-2">Year</label>
+                  <select name="year" className="input" value={formData.year} onChange={handleChange}>
                     <option value="">Select Year</option>
                     <option value="Freshman">Freshman</option>
                     <option value="Sophomore">Sophomore</option>
@@ -556,92 +571,103 @@ const Profile = () => {
                   </select>
                 </div>
               </div>
+            </motion.div>
 
-              <div className="form-group">
-                <label>Location</label>
-                <div className="location-input-wrapper">
-                  <input
-                    type="text"
-                    name="location"
-                    className="input"
-                    value={formData.location}
-                    onChange={handleLocationInput}
-                    onFocus={() => {
-                      if (formData.location.length >= 2 && locationSuggestions.length > 0) {
-                        setShowLocationSuggestions(true);
-                      }
-                    }}
-                    onBlur={() => {
-                      // Delay hiding to allow click on suggestion
-                      setTimeout(() => {
-                        setShowLocationSuggestions(false);
-                      }, 250);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'ArrowDown' && locationSuggestions.length > 0) {
-                        e.preventDefault();
-                        const firstSuggestion = document.querySelector('.suggestion-item');
-                        if (firstSuggestion) {
-                          firstSuggestion.focus();
-                        }
-                      } else if (e.key === 'Escape') {
-                        setShowLocationSuggestions(false);
-                      }
-                    }}
-                    placeholder="City, State (e.g., Atlanta, GA)"
-                    autoComplete="off"
-                    autoCapitalize="words"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={usePreciseLocation}
-                  >
-                    📍 Use My Location
-                  </button>
-                  {showLocationSuggestions && locationSuggestions.length > 0 && (
-                    <div className="location-suggestions">
-                      {locationSuggestions.map((suggestion, idx) => (
-                        <div
-                          key={idx}
-                          className="suggestion-item"
-                          onMouseDown={(e) => {
-                            e.preventDefault(); // Prevent input blur
-                            selectLocation(suggestion);
-                          }}
-                          onClick={() => selectLocation(suggestion)}
-                        >
-                          {suggestion}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="showLocation"
-                    checked={formData.showLocation}
-                    onChange={handleChange}
-                  />
-                  Show my location for matching
-                </label>
+            {/* Location */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="glass-card"
+            >
+            <h2 className="text-2xl font-bold text-glass-text-primary mb-6 flex items-center gap-3">
+              <span className="text-2xl">📍</span>
+              Location
+            </h2>
+            <div className="space-y-4">
+              <div className="relative">
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  className="input"
+                  value={formData.location}
+                  onChange={handleLocationInput}
+                  onFocus={() => {
+                    if (formData.location.length >= 2 && locationSuggestions.length > 0) {
+                      setShowLocationSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setShowLocationSuggestions(false);
+                    }, 250);
+                  }}
+                  placeholder="City, State (e.g., Atlanta, GA)"
+                  autoComplete="off"
+                />
+                {showLocationSuggestions && locationSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-2 max-h-60 overflow-y-auto rounded-2xl border border-glass-border shadow-glass-lg" style={{ backgroundColor: 'rgba(10, 10, 15, 0.95)', backdropFilter: 'blur(20px)' }}>
+                    {locationSuggestions.map((suggestion, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 hover:bg-glass-bg-hover cursor-pointer rounded-xl transition-colors text-glass-text-primary"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectLocation(suggestion);
+                        }}
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={usePreciseLocation}
+              >
+                📍 Use My Location
+              </button>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="showLocation"
+                  checked={formData.showLocation}
+                  onChange={handleChange}
+                  className="w-4 h-4 rounded border-glass-border bg-glass-bg-card text-glass-accent-primary focus:ring-glass-accent-primary"
+                />
+                <span className="text-glass-text-secondary">Show my location for matching</span>
+              </label>
+            </div>
+            </motion.div>
 
-              <div className="form-group">
-                <label>Career Goals</label>
+            {/* Career Information */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="glass-card"
+            >
+            <h2 className="text-2xl font-bold text-glass-text-primary mb-6 flex items-center gap-3">
+              <span className="text-2xl">💼</span>
+              Career Information
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">Career Goals</label>
                 <textarea
                   name="careerGoals"
-                  className="textarea"
+                  className="input min-h-[80px] resize-none"
                   value={formData.careerGoals}
                   onChange={handleChange}
                   rows="3"
                 />
               </div>
-
-              <div className="form-group">
-                <label>Availability</label>
-                <select name="availability" className="select" value={formData.availability} onChange={handleChange}>
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">Availability</label>
+                <select name="availability" className="input" value={formData.availability} onChange={handleChange}>
                   <option value="">Select Availability</option>
                   <option value="Very Available">Very Available (10+ hours/week)</option>
                   <option value="Moderately Available">Moderately Available (5-10 hours/week)</option>
@@ -649,9 +675,8 @@ const Profile = () => {
                   <option value="On Demand">On Demand (As needed)</option>
                 </select>
               </div>
-
-              <div className="form-group">
-                <label>Career/Job Title</label>
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">Career/Job Title</label>
                 <input
                   type="text"
                   name="career"
@@ -661,271 +686,335 @@ const Profile = () => {
                   placeholder="e.g., Software Engineer"
                 />
               </div>
-
-              <div className="form-group">
-                <label>Career Experience</label>
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">Career Experience</label>
                 <textarea
                   name="careerExperience"
-                  className="textarea"
+                  className="input min-h-[100px] resize-none"
                   value={formData.careerExperience}
                   onChange={handleChange}
                   rows="4"
                 />
               </div>
-
-              <div className="form-group">
-                <label>Research & Publications</label>
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">Research & Publications</label>
                 <textarea
                   name="researchPublications"
-                  className="textarea"
+                  className="input min-h-[100px] resize-none"
                   value={formData.researchPublications}
                   onChange={handleChange}
                   rows="4"
                 />
               </div>
-
-              <div className="form-group">
-                <label>Awards & Achievements</label>
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">Awards & Achievements</label>
                 <textarea
                   name="awards"
-                  className="textarea"
+                  className="input min-h-[100px] resize-none"
                   value={formData.awards}
                   onChange={handleChange}
                   rows="4"
                 />
               </div>
             </div>
+            </motion.div>
 
-            {/* Languages */}
-            <div className="profile-section">
-              <h3>Languages</h3>
-              <div className="items-list">
-                {languages.map(lang => (
-                  <div key={lang.languageId} className="item-card">
-                    <div>
-                      <strong>{lang.languageName}</strong> - {lang.proficiencyLevel}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => deleteLanguage(lang.languageId)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {showAddLanguage ? (
-                <div className="add-item-form">
-                  <select
-                    className="input"
-                    value={newLanguage.languageName}
-                    onChange={(e) => setNewLanguage({ ...newLanguage, languageName: e.target.value })}
-                  >
-                    <option value="">Select Language</option>
-                    {['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Portuguese', 'Italian'].map(lang => (
-                      <option key={lang} value={lang}>{lang}</option>
-                    ))}
-                  </select>
-                  <select
-                    className="input"
-                    value={newLanguage.proficiencyLevel}
-                    onChange={(e) => setNewLanguage({ ...newLanguage, proficiencyLevel: e.target.value })}
-                  >
-                    <option value="Native">Native</option>
-                    <option value="Fluent">Fluent</option>
-                    <option value="Conversational">Conversational</option>
-                    <option value="Basic">Basic</option>
-                  </select>
-                  <div className="form-actions">
-                    <button type="button" className="btn btn-primary" onClick={addLanguage}>Add</button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setShowAddLanguage(false)}>Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddLanguage(true)}>
-                  Add Language
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column */}
-          <div className="profile-column">
             {/* Skills */}
-            <div className="profile-section">
-              <h3>My Skills</h3>
-              <div className="items-list">
-                {skills.map(skill => (
-                  <div key={skill.skillId} className="item-card">
-                    <div>
-                      <strong>{skill.skillName}</strong> - {skill.skillLevel}
-                      {skill.offering && <span className="badge offering">Offering</span>}
-                      {skill.seeking && <span className="badge seeking">Seeking</span>}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => deleteSkill(skill.skillId)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {showAddSkill ? (
-                <div className="add-item-form">
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Skill name"
-                    value={newSkill.skillName}
-                    onChange={(e) => setNewSkill({ ...newSkill, skillName: e.target.value })}
-                  />
-                  <select
-                    className="input"
-                    value={newSkill.skillLevel}
-                    onChange={(e) => setNewSkill({ ...newSkill, skillLevel: e.target.value })}
-                  >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
-                    <option value="Expert">Expert</option>
-                  </select>
-                  <div className="checkbox-group">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={newSkill.offering}
-                        onChange={(e) => setNewSkill({ ...newSkill, offering: e.target.checked })}
-                      />
-                      Offering
-                    </label>
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={newSkill.seeking}
-                        onChange={(e) => setNewSkill({ ...newSkill, seeking: e.target.checked })}
-                      />
-                      Seeking
-                    </label>
-                  </div>
-                  <div className="form-actions">
-                    <button type="button" className="btn btn-primary" onClick={addSkill}>Add</button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setShowAddSkill(false)}>Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddSkill(true)}>
-                  Add Skill
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="glass-card"
+            >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-glass-text-primary flex items-center gap-3">
+                <span className="text-2xl">🎯</span>
+                My Skills
+              </h2>
+              {!showAddSkill && (
+                <button type="button" className="btn btn-secondary text-sm" onClick={() => setShowAddSkill(true)}>
+                  + Add Skill
                 </button>
               )}
             </div>
+            {showAddSkill ? (
+              <div className="mb-6 p-4 rounded-xl border border-glass-border space-y-4" style={{ backgroundColor: 'rgba(10, 10, 15, 0.9)', backdropFilter: 'blur(20px)' }}>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Skill name"
+                  value={newSkill.skillName}
+                  onChange={(e) => setNewSkill({ ...newSkill, skillName: e.target.value })}
+                />
+                <select
+                  className="input"
+                  value={newSkill.skillLevel}
+                  onChange={(e) => setNewSkill({ ...newSkill, skillLevel: e.target.value })}
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                  <option value="Expert">Expert</option>
+                </select>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newSkill.offering}
+                      onChange={(e) => setNewSkill({ ...newSkill, offering: e.target.checked })}
+                      className="w-4 h-4 rounded border-glass-border bg-glass-bg-card text-glass-accent-primary"
+                    />
+                    <span className="text-glass-text-secondary">Offering</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newSkill.seeking}
+                      onChange={(e) => setNewSkill({ ...newSkill, seeking: e.target.checked })}
+                      className="w-4 h-4 rounded border-glass-border bg-glass-bg-card text-glass-accent-primary"
+                    />
+                    <span className="text-glass-text-secondary">Seeking</span>
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" className="btn btn-primary flex-1" onClick={addSkill}>Add</button>
+                  <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowAddSkill(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              {skills.map(skill => (
+                <div key={skill.skillId} className="flex items-center justify-between p-4 bg-glass-bg-card rounded-xl border border-glass-border">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-glass-text-primary">{skill.skillName}</span>
+                    <span className="text-sm text-glass-text-secondary">- {skill.skillLevel}</span>
+                    {skill.offering && <span className="px-2 py-1 text-xs rounded-lg bg-glass-accent-success/20 text-glass-accent-success">Offering</span>}
+                    {skill.seeking && <span className="px-2 py-1 text-xs rounded-lg bg-glass-accent-info/20 text-glass-accent-info">Seeking</span>}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-danger text-sm"
+                    onClick={() => deleteSkill(skill.skillId)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+              {skills.length === 0 && !showAddSkill && (
+                <p className="text-glass-text-muted text-center py-4">No skills added yet</p>
+              )}
+            </div>
+            </motion.div>
 
             {/* Interests */}
-            <div className="profile-section">
-              <h3>Interests & Hobbies</h3>
-              <div className="items-list">
-                {interests.map(interest => (
-                  <div key={interest.interestId} className="item-card">
-                    <div>
-                      <strong>{interest.interestName}</strong>
-                      {interest.category && <span className="badge"> {interest.category}</span>}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => deleteInterest(interest.interestId)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {showAddInterest ? (
-                <div className="add-item-form">
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Interest name"
-                    value={newInterest.interestName}
-                    onChange={(e) => setNewInterest({ ...newInterest, interestName: e.target.value })}
-                  />
-                  <select
-                    className="input"
-                    value={newInterest.category}
-                    onChange={(e) => setNewInterest({ ...newInterest, category: e.target.value })}
-                  >
-                    <option value="">Category (optional)</option>
-                    {['Technology', 'Arts', 'Sports', 'Music', 'Travel', 'Food', 'Gaming', 'Reading', 'Other'].map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                  <div className="form-actions">
-                    <button type="button" className="btn btn-primary" onClick={addInterest}>Add</button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setShowAddInterest(false)}>Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddInterest(true)}>
-                  Add Interest
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="glass-card"
+            >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-glass-text-primary flex items-center gap-3">
+                <span className="text-2xl">⭐</span>
+                Interests & Hobbies
+              </h2>
+              {!showAddInterest && (
+                <button type="button" className="btn btn-secondary text-sm" onClick={() => setShowAddInterest(true)}>
+                  + Add Interest
                 </button>
               )}
             </div>
+            {showAddInterest ? (
+              <div className="mb-6 p-4 rounded-xl border border-glass-border space-y-4" style={{ backgroundColor: 'rgba(10, 10, 15, 0.9)', backdropFilter: 'blur(20px)' }}>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Interest name"
+                  value={newInterest.interestName}
+                  onChange={(e) => setNewInterest({ ...newInterest, interestName: e.target.value })}
+                />
+                <select
+                  className="input"
+                  value={newInterest.category}
+                  onChange={(e) => setNewInterest({ ...newInterest, category: e.target.value })}
+                >
+                  <option value="">Category (optional)</option>
+                  {['Technology', 'Arts', 'Sports', 'Music', 'Travel', 'Food', 'Gaming', 'Reading', 'Other'].map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <div className="flex gap-2">
+                  <button type="button" className="btn btn-primary flex-1" onClick={addInterest}>Add</button>
+                  <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowAddInterest(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              {interests.map(interest => (
+                <div key={interest.interestId} className="flex items-center justify-between p-4 bg-glass-bg-card rounded-xl border border-glass-border">
+                  <div>
+                    <span className="font-semibold text-glass-text-primary">{interest.interestName}</span>
+                    {interest.category && <span className="ml-2 text-sm text-glass-text-secondary">({interest.category})</span>}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-danger text-sm"
+                    onClick={() => deleteInterest(interest.interestId)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+              {interests.length === 0 && !showAddInterest && (
+                <p className="text-glass-text-muted text-center py-4">No interests added yet</p>
+              )}
+            </div>
+            </motion.div>
 
             {/* Organizations */}
-            <div className="profile-section">
-              <h3>Organizations & Clubs</h3>
-              <div className="items-list">
-                {organizations.map(org => (
-                  <div key={org.orgId} className="item-card">
-                    <div>
-                      <strong>{org.organizationName}</strong>
-                      {org.role && <span> - {org.role}</span>}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => deleteOrganization(org.orgId)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {showAddOrg ? (
-                <div className="add-item-form">
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Organization name"
-                    value={newOrg.organizationName}
-                    onChange={(e) => setNewOrg({ ...newOrg, organizationName: e.target.value })}
-                  />
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Your role"
-                    value={newOrg.role}
-                    onChange={(e) => setNewOrg({ ...newOrg, role: e.target.value })}
-                  />
-                  <div className="form-actions">
-                    <button type="button" className="btn btn-primary" onClick={addOrganization}>Add</button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setShowAddOrg(false)}>Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddOrg(true)}>
-                  Add Organization
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="glass-card"
+            >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-glass-text-primary flex items-center gap-3">
+                <span className="text-2xl">🏛️</span>
+                Organizations & Clubs
+              </h2>
+              {!showAddOrg && (
+                <button type="button" className="btn btn-secondary text-sm" onClick={() => setShowAddOrg(true)}>
+                  + Add Organization
                 </button>
               )}
             </div>
+            {showAddOrg ? (
+              <div className="mb-6 p-4 rounded-xl border border-glass-border space-y-4" style={{ backgroundColor: 'rgba(10, 10, 15, 0.9)', backdropFilter: 'blur(20px)' }}>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Organization name"
+                  value={newOrg.organizationName}
+                  onChange={(e) => setNewOrg({ ...newOrg, organizationName: e.target.value })}
+                />
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Your role"
+                  value={newOrg.role}
+                  onChange={(e) => setNewOrg({ ...newOrg, role: e.target.value })}
+                />
+                <div className="flex gap-2">
+                  <button type="button" className="btn btn-primary flex-1" onClick={addOrganization}>Add</button>
+                  <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowAddOrg(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              {organizations.map(org => (
+                <div key={org.orgId} className="flex items-center justify-between p-4 bg-glass-bg-card rounded-xl border border-glass-border">
+                  <div>
+                    <span className="font-semibold text-glass-text-primary">{org.organizationName}</span>
+                    {org.role && <span className="ml-2 text-sm text-glass-text-secondary">- {org.role}</span>}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-danger text-sm"
+                    onClick={() => deleteOrganization(org.orgId)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+              {organizations.length === 0 && !showAddOrg && (
+                <p className="text-glass-text-muted text-center py-4">No organizations added yet</p>
+              )}
+            </div>
+            </motion.div>
+
+            {/* Languages */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="glass-card"
+            >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-glass-text-primary flex items-center gap-3">
+                <span className="text-2xl">🌐</span>
+                Languages
+              </h2>
+              {!showAddLanguage && (
+                <button type="button" className="btn btn-secondary text-sm" onClick={() => setShowAddLanguage(true)}>
+                  + Add Language
+                </button>
+              )}
+            </div>
+            {showAddLanguage ? (
+              <div className="mb-6 p-4 rounded-xl border border-glass-border space-y-4" style={{ backgroundColor: 'rgba(10, 10, 15, 0.9)', backdropFilter: 'blur(20px)' }}>
+                <select
+                  className="input"
+                  value={newLanguage.languageName}
+                  onChange={(e) => setNewLanguage({ ...newLanguage, languageName: e.target.value })}
+                >
+                  <option value="">Select Language</option>
+                  {['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Portuguese', 'Italian'].map(lang => (
+                    <option key={lang} value={lang}>{lang}</option>
+                  ))}
+                </select>
+                <select
+                  className="input"
+                  value={newLanguage.proficiencyLevel}
+                  onChange={(e) => setNewLanguage({ ...newLanguage, proficiencyLevel: e.target.value })}
+                >
+                  <option value="Native">Native</option>
+                  <option value="Fluent">Fluent</option>
+                  <option value="Conversational">Conversational</option>
+                  <option value="Basic">Basic</option>
+                </select>
+                <div className="flex gap-2">
+                  <button type="button" className="btn btn-primary flex-1" onClick={addLanguage}>Add</button>
+                  <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowAddLanguage(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              {languages.map(lang => (
+                <div key={lang.languageId} className="flex items-center justify-between p-4 bg-glass-bg-card rounded-xl border border-glass-border">
+                  <div>
+                    <span className="font-semibold text-glass-text-primary">{lang.languageName}</span>
+                    <span className="ml-2 text-sm text-glass-text-secondary">- {lang.proficiencyLevel}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-danger text-sm"
+                    onClick={() => deleteLanguage(lang.languageId)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+              {languages.length === 0 && !showAddLanguage && (
+                <p className="text-glass-text-muted text-center py-4">No languages added yet</p>
+              )}
+            </div>
+            </motion.div>
 
             {/* Social Links */}
-            <div className="profile-section">
-              <h3>Social Links</h3>
-              <div className="form-group">
-                <label>LinkedIn</label>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="glass-card"
+            >
+            <h2 className="text-2xl font-bold text-glass-text-primary mb-6 flex items-center gap-3">
+              <span className="text-2xl">🔗</span>
+              Social Links
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">LinkedIn</label>
                 <input
                   type="url"
                   name="linkedin"
@@ -935,8 +1024,8 @@ const Profile = () => {
                   placeholder="https://linkedin.com/in/yourprofile"
                 />
               </div>
-              <div className="form-group">
-                <label>GitHub</label>
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">GitHub</label>
                 <input
                   type="url"
                   name="github"
@@ -946,8 +1035,8 @@ const Profile = () => {
                   placeholder="https://github.com/yourusername"
                 />
               </div>
-              <div className="form-group">
-                <label>Portfolio Website</label>
+              <div>
+                <label className="block text-sm font-medium text-glass-text-secondary mb-2">Portfolio Website</label>
                 <input
                   type="url"
                   name="portfolio"
@@ -958,15 +1047,17 @@ const Profile = () => {
                 />
               </div>
             </div>
-          </div>
-        </div>
+            </motion.div>
 
-        <div className="profile-actions">
-          <button type="submit" className="btn btn-primary btn-large" disabled={saving}>
-            {saving ? 'Saving...' : 'Save Profile'}
-          </button>
-        </div>
-      </form>
+            {/* Submit Button */}
+            <div className="flex justify-end pt-6">
+              <button type="submit" className="btn btn-primary px-12 py-5 text-lg" disabled={saving}>
+                {saving ? 'Saving...' : 'Save Profile'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

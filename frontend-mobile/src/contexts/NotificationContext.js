@@ -145,11 +145,11 @@ export const NotificationProvider = ({ children }) => {
 
     initializeCounts();
 
-    // Set up polling every 20 seconds (reduced frequency to minimize API calls)
+    // Set up polling every 5 seconds for faster notification updates
     intervalRef.current = setInterval(() => {
       checkForNewMatches();
       checkForNewMessages();
-    }, 20000); // Poll every 20 seconds (increased from 10 seconds)
+    }, 5000); // Poll every 5 seconds for faster notifications
 
     return () => {
       if (intervalRef.current) {
@@ -214,6 +214,12 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
+  // Function to trigger immediate notification check (useful after actions like swiping)
+  const checkNotificationsImmediately = () => {
+    checkForNewMatches();
+    checkForNewMessages();
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -222,6 +228,7 @@ export const NotificationProvider = ({ children }) => {
         unreadMessages,
         clearMatchNotifications,
         clearMessageNotifications,
+        checkNotificationsImmediately,
       }}
     >
       {children}

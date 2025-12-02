@@ -22,16 +22,16 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#667eea',
-        tabBarInactiveTintColor: '#718096',
+        tabBarActiveTintColor: '#14b8a6',
+        tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
-          backgroundColor: '#1a1a2e',
-          borderTopColor: '#2d3748',
+          backgroundColor: '#111118',
+          borderTopColor: '#2a2a3a',
         },
         headerStyle: {
-          backgroundColor: '#1a1a2e',
+          backgroundColor: '#111118',
         },
-        headerTintColor: '#e2e8f0',
+        headerTintColor: '#f1f5f9',
       }}
     >
       <Tabs.Screen
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#1a1a2e',
+    borderColor: '#111118',
   },
   badgeText: {
     color: '#fff',

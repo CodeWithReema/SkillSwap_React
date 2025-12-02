@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 // Example: 'http://192.168.1.100:8080' or 'http://10.12.3.234:8080'
 // 
 // IMPORTANT: Make sure to include 'http://' prefix and ':8080' port
-const PHYSICAL_DEVICE_IP = 'http://192.168.1.7:8080'; // <-- CHANGE THIS TO YOUR IP
+const PHYSICAL_DEVICE_IP = 'http://10.12.40.209:8080'; // <-- CHANGE THIS TO YOUR IP
 
 // Set to true if testing on a physical device, false for emulator/simulator
 const IS_PHYSICAL_DEVICE = true; // <-- CHANGE THIS

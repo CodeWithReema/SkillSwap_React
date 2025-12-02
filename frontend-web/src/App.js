@@ -11,7 +11,6 @@ import Messages from './pages/Messages';
 import Profile from './pages/Profile';
 import ViewProfile from './pages/ViewProfile';
 import NotificationToast from './components/NotificationToast';
-import './App.css';
 
 function AppContent() {
   return (
@@ -70,7 +69,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="App">
+        <div className="min-h-screen">
           <AppContent />
         </div>
       </Router>

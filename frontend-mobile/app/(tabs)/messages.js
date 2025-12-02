@@ -50,13 +50,13 @@ export default function Messages() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Poll for new messages to update previews (less frequently to reduce API calls)
+  // Poll for new messages to update previews (faster polling for better responsiveness)
   useEffect(() => {
     if (!selectedMatch) {
       const interval = setInterval(() => {
         // Only refresh matches list if no conversation is selected (silently, no loading state)
         loadMatches(false); // Silent background refresh
-      }, 15000); // Poll every 15 seconds (reduced from 5 seconds)
+      }, 8000); // Poll every 8 seconds for faster updates
       
       return () => clearInterval(interval);
     }
@@ -292,7 +292,7 @@ export default function Messages() {
     );
   }
 
-  const renderConversation = ({ item }) => {
+  const renderConversation = ({ item, index }) => {
     const userId = getCurrentUserId();
     const previewText = item.latestMessage
       ? (item.latestMessage.messageContent || item.latestMessage.content || '')
@@ -301,12 +301,13 @@ export default function Messages() {
       ? new Date(item.latestMessage.timestamp || item.latestMessage.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '';
     
-    // Check if latest message is unread and from the other user
-    // Also check if this conversation is not currently selected (don't show dot if viewing it)
     const isUnread = item.latestMessage && 
       (item.latestMessage.sender?.userId || item.latestMessage.sender?.id) !== userId &&
       !item.latestMessage.isRead &&
       selectedMatch?.matchId !== item.matchId;
+
+    // Alternate rotation for asymmetric effect
+    const rotation = index % 2 === 0 ? -0.5 : 0.5;
 
     return (
       <TouchableOpacity
@@ -314,18 +315,23 @@ export default function Messages() {
           styles.conversationItem,
           isUnread && styles.conversationItemUnread,
           selectedMatch?.matchId === item.matchId && styles.conversationItemActive,
+          { transform: [{ rotate: `${rotation}deg` }] }
         ]}
         onPress={() => setSelectedMatch(item)}
+        activeOpacity={0.8}
       >
-        {item.photoUrl ? (
-          <Image source={{ uri: item.photoUrl }} style={styles.conversationAvatarImage} />
-        ) : (
-          <View style={styles.conversationAvatar}>
-            <Text style={styles.conversationAvatarText}>
-              {item.otherUser?.firstName?.[0]}{item.otherUser?.lastName?.[0]}
-            </Text>
-          </View>
-        )}
+        {/* Gradient Header Section */}
+        <View style={styles.conversationHeaderGradient}>
+          {item.photoUrl ? (
+            <Image source={{ uri: item.photoUrl }} style={styles.conversationAvatarImage} />
+          ) : (
+            <View style={styles.conversationAvatar}>
+              <Text style={styles.conversationAvatarText}>
+                {item.otherUser?.firstName?.[0]}{item.otherUser?.lastName?.[0]}
+              </Text>
+            </View>
+          )}
+        </View>
         <View style={styles.conversationInfo}>
           <View style={styles.conversationHeader}>
             <Text style={[
@@ -456,13 +462,23 @@ const styles = StyleSheet.create({
   },
   conversationItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
+    alignItems: 'stretch',
+    padding: 0,
     backgroundColor: theme.colors.bgCard,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: theme.borderRadius.xxxl,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    gap: theme.spacing.md,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.glass,
+    position: 'relative',
+    minHeight: 100,
+  },
+  conversationHeaderGradient: {
+    width: 100,
+    backgroundColor: theme.colors.accentPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
   },
   conversationItemUnread: {
@@ -475,19 +491,22 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.accentPrimary,
   },
   conversationAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: theme.colors.accentPrimary,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    ...theme.shadows.glass,
   },
   conversationAvatarImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: theme.colors.accentPrimary,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   conversationAvatarText: {
     fontSize: 20,
@@ -498,6 +517,8 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     position: 'relative',
+    padding: theme.spacing.lg,
+    justifyContent: 'center',
   },
   conversationHeader: {
     flexDirection: 'row',
@@ -552,9 +573,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
-    backgroundColor: theme.colors.bgCard,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.accentPrimary,
     gap: theme.spacing.md,
   },
   backButton: {
@@ -562,13 +581,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 24,
-    color: theme.colors.textPrimary,
+    color: '#fff',
     fontWeight: '600',
   },
   messagesHeaderName: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.textPrimary,
+    color: '#fff',
   },
   messagesContainer: {
     flex: 1,
@@ -586,12 +605,14 @@ const styles = StyleSheet.create({
   ownMessage: {
     alignSelf: 'flex-end',
     backgroundColor: theme.colors.accentPrimary,
+    borderTopRightRadius: theme.borderRadius.xs,
   },
   otherMessage: {
     alignSelf: 'flex-start',
     backgroundColor: theme.colors.bgCard,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    borderTopLeftRadius: theme.borderRadius.xs,
   },
   messageText: {
     color: theme.colors.textPrimary,
