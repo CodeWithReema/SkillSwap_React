@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
-  PanResponder,
   Alert,
   TouchableOpacity,
   Modal,
@@ -15,12 +14,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useNotifications } from '../../src/contexts/NotificationContext';
 import { userAPI, profileAPI, swipeAPI, photoAPI, matchAPI } from '../../src/services/api';
 import { theme } from '../../src/styles/theme';
 import DiscoverCard from '../../src/components/DiscoverCard';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SWIPE_THRESHOLD = 120;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function Discover() {
   const [users, setUsers] = useState([]);
@@ -37,6 +36,7 @@ export default function Discover() {
     activeChats: 0,
   });
   const { getCurrentUserId } = useAuth();
+  const { checkNotificationsImmediately } = useNotifications();
   const router = useRouter();
 
   useEffect(() => {
@@ -74,13 +74,11 @@ export default function Discover() {
 
       const swipedUserIds = new Set(swipes.map(s => s.swipee?.userId || s.swipee?.id));
 
-      // Merge user and profile data and load photos
       const usersWithProfiles = await Promise.all(
         allUsers.map(async (user) => {
           const profile = allProfiles.find(p => p.user?.userId === user.userId);
           let photoUrl = null;
           
-          // Load primary photo if profile exists
           if (profile?.profileId) {
             try {
               const photos = await photoAPI.getByProfile(profile.profileId);
@@ -103,18 +101,10 @@ export default function Discover() {
         })
       );
 
-      let filteredUsers = usersWithProfiles.filter(
-        user => user.userId !== currentUserId && !swipedUserIds.has(user.userId)
+      let filteredUsers = usersWithProfiles.filter(user => 
+        user.userId !== currentUserId && !swipedUserIds.has(user.userId)
       );
 
-      // Apply year filter
-      if (filters.years.length > 0) {
-        filteredUsers = filteredUsers.filter(user => {
-          return user.profile && filters.years.includes(user.profile.year);
-        });
-      }
-
-      // Calculate distances if current user has location
       const currentUser = allUsers.find(u => u.userId === currentUserId);
       const currentProfile = allProfiles.find(p => p.user?.userId === currentUserId);
       const currentLat = currentProfile?.latitude || currentUser?.latitude;
@@ -123,15 +113,27 @@ export default function Discover() {
       if (currentLat && currentLon) {
         filteredUsers.forEach(user => {
           if (user.latitude && user.longitude) {
-            user.distance = calculateDistance(currentLat, currentLon, user.latitude, user.longitude);
+            const R = 6371;
+            const dLat = (user.latitude - currentLat) * Math.PI / 180;
+            const dLon = (user.longitude - currentLon) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(currentLat * Math.PI / 180) * Math.cos(user.latitude * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            user.distance = R * c;
           }
         });
       }
 
-      // Apply location filter if enabled
-      if (filters.locationEnabled && currentLat && currentLon) {
+      if (filters.years.length > 0) {
         filteredUsers = filteredUsers.filter(user => {
-          if (!user.distance) return false;
+          return user.profile && filters.years.includes(user.profile.year);
+        });
+      }
+
+      if (filters.locationEnabled) {
+        filteredUsers = filteredUsers.filter(user => {
+          if (!user.latitude || !user.longitude) return false;
           return user.distance <= filters.maxDistance;
         });
       }
@@ -145,97 +147,33 @@ export default function Discover() {
     }
   };
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Math.round(R * c * 10) / 10; // Round to 1 decimal place
-  };
-
   const handleSwipe = async (direction) => {
     if (currentIndex >= users.length) return;
 
     const currentUser = users[currentIndex];
     const isLike = direction === 'right';
-    const swiperId = getCurrentUserId();
-    const swipeeId = currentUser.userId;
-
-    // Validate IDs
-    if (!swiperId || !swipeeId) {
-      console.error('Invalid user IDs:', { swiperId, swipeeId });
-      Alert.alert('Error', 'Invalid user information');
-      return;
-    }
 
     try {
-      // Ensure userIds are numbers, not strings
-      const swipeData = {
-        swiper: { 
-          userId: typeof swiperId === 'string' ? parseInt(swiperId, 10) : swiperId 
-        },
-        swipee: { 
-          userId: typeof swipeeId === 'string' ? parseInt(swipeeId, 10) : swipeeId 
-        },
-        isLike: isLike,
-      };
+      await swipeAPI.create({
+        swiper: { userId: getCurrentUserId() },
+        swipee: { userId: currentUser.userId },
+        isLike,
+      });
 
-      // Validate the data before sending
-      if (!swipeData.swiper.userId || !swipeData.swipee.userId) {
-        throw new Error('Invalid user IDs in swipe data');
+      if (isLike) {
+        setTimeout(() => {
+          loadStats();
+          // Immediately check for new matches after a successful like
+          checkNotificationsImmediately();
+        }, 500);
       }
 
-      console.log('Sending swipe data:', JSON.stringify(swipeData, null, 2));
-      const result = await swipeAPI.create(swipeData);
-      console.log('Swipe successful:', result);
-
-      // Remove the swiped user from the list
-      const updatedUsers = users.filter((_, index) => index !== currentIndex);
-      setUsers(updatedUsers);
-      
-      // Reset index to 0 to show the next card (which is now at index 0)
-      setCurrentIndex(0);
+      setCurrentIndex(prev => prev + 1);
     } catch (error) {
       console.error('Error performing swipe:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        swipeData: { swiperId, swipeeId, isLike },
-      });
-      
-      // Show user-friendly error message
-      const errorMessage = error.response?.data?.message 
-        || error.response?.data 
-        || error.message 
-        || 'Failed to perform swipe. Please try again.';
-      
-      Alert.alert('Swipe Error', errorMessage);
+      Alert.alert('Error', 'Failed to perform swipe. Please try again.');
     }
   };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading users...</Text>
-      </View>
-    );
-  }
-
-  if (currentIndex >= users.length) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>No more users!</Text>
-        <Text style={styles.emptyText}>Check back later for new profiles.</Text>
-      </View>
-    );
-  }
-
-  const currentUser = users[currentIndex];
 
   const toggleYearFilter = (year) => {
     setFilters(prev => ({
@@ -253,25 +191,120 @@ export default function Discover() {
     }));
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading users...</Text>
+      </View>
+    );
+  }
+
+  if (currentIndex >= users.length) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyIcon}>✨</Text>
+        <Text style={styles.emptyTitle}>No more users!</Text>
+        <Text style={styles.emptyText}>Check back later for new profiles.</Text>
+        
+        {/* Navigation Buttons - Only shown when no more cards */}
+        <View style={styles.navigationButtons}>
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() => router.push('/(tabs)/matches')}
+          >
+            <Text style={styles.navButtonIcon}>💫</Text>
+            <Text style={styles.navButtonText}>View Matches</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() => router.push('/(tabs)/messages')}
+          >
+            <Text style={styles.navButtonIcon}>💬</Text>
+            <Text style={styles.navButtonText}>Messages</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const currentUser = users[currentIndex];
+  const nextUser = users[currentIndex + 1];
+  const thirdUser = users[currentIndex + 2];
+
   return (
     <View style={styles.container}>
-      {/* Filter Button */}
+      {/* Floating Stats Pills - Top */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statPill}>
+          <Text style={styles.statIcon}>💫</Text>
+          <Text style={styles.statValue}>{stats.totalMatches}</Text>
+          <Text style={styles.statLabel}>Matches</Text>
+        </View>
+        <View style={styles.statPill}>
+          <Text style={styles.statIcon}>💬</Text>
+          <Text style={styles.statValue}>{stats.activeChats}</Text>
+          <Text style={styles.statLabel}>Chats</Text>
+        </View>
+      </View>
+
+      {/* Overlapping Card Stack - Unique Layout */}
+      <View style={styles.cardStackContainer}>
+        {/* Third Card (Back) */}
+        {thirdUser && (
+          <View style={[styles.cardStack, styles.cardStackBack]}>
+            <View style={styles.cardStackContent}>
+              <View style={styles.cardStackAvatar}>
+                {thirdUser.photoUrl ? (
+                  <Image source={{ uri: thirdUser.photoUrl }} style={styles.cardStackAvatarImage} />
+                ) : (
+                  <View style={styles.cardStackAvatarPlaceholder}>
+                    <Text style={styles.cardStackAvatarText}>
+                      {thirdUser.firstName?.[0]}{thirdUser.lastName?.[0]}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Second Card (Middle) */}
+        {nextUser && (
+          <View style={[styles.cardStack, styles.cardStackMiddle]}>
+            <View style={styles.cardStackContent}>
+              <View style={styles.cardStackAvatar}>
+                {nextUser.photoUrl ? (
+                  <Image source={{ uri: nextUser.photoUrl }} style={styles.cardStackAvatarImage} />
+                ) : (
+                  <View style={styles.cardStackAvatarPlaceholder}>
+                    <Text style={styles.cardStackAvatarText}>
+                      {nextUser.firstName?.[0]}{nextUser.lastName?.[0]}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Main Card (Front) */}
+        <View style={styles.cardStackFront}>
+          <DiscoverCard
+            key={`${currentUser.userId}-${currentIndex}`}
+            user={currentUser}
+            onSwipe={handleSwipe}
+            onViewProfile={() => router.push(`/profile/${currentUser.userId}`)}
+          />
+        </View>
+      </View>
+
+      {/* Filter Button - Floating */}
       <TouchableOpacity
         style={styles.filterButton}
         onPress={() => setShowFilters(true)}
       >
-        <Text style={styles.filterButtonText}>🔍 Filters</Text>
+        <Text style={styles.filterButtonIcon}>🔍</Text>
       </TouchableOpacity>
-
-      {/* Card */}
-      <View style={styles.cardContainer}>
-        <DiscoverCard
-          key={`${currentUser.userId}-${currentIndex}`}
-          user={currentUser}
-          onSwipe={handleSwipe}
-          onViewProfile={() => router.push(`/profile/${currentUser.userId}`)}
-        />
-      </View>
 
       {/* Filter Modal */}
       <Modal
@@ -296,7 +329,6 @@ export default function Discover() {
             </View>
 
             <ScrollView style={styles.modalScrollView}>
-              {/* Year Filter */}
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionTitle}>Year</Text>
                 <View style={styles.filterPills}>
@@ -320,7 +352,6 @@ export default function Discover() {
                 </View>
               </View>
 
-              {/* Location Filter */}
               <View style={styles.filterSection}>
                 <View style={styles.filterRow}>
                   <View style={styles.filterRowContent}>
@@ -363,19 +394,6 @@ export default function Discover() {
                   </View>
                 )}
               </View>
-
-              {/* Stats Section */}
-              <View style={styles.statsSection}>
-                <Text style={styles.statsSectionTitle}>YOUR STATS</Text>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Total Matches</Text>
-                  <Text style={styles.statValue}>{stats.totalMatches}</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Active Chats</Text>
-                  <Text style={styles.statValue}>{stats.activeChats}</Text>
-                </View>
-              </View>
             </ScrollView>
           </View>
         </Pressable>
@@ -389,90 +407,164 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.bgPrimary,
   },
-  filterButton: {
-    position: 'absolute',
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
-    zIndex: 1000,
-    elevation: 10, // Android shadow/elevation
-    backgroundColor: theme.colors.accentPrimary,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    minWidth: 70,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.bgPrimary,
   },
-  filterButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  filterContainer: {
-    backgroundColor: theme.colors.bgCard,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    margin: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  filterTitle: {
+  loadingText: {
+    color: theme.colors.textSecondary,
     fontSize: 16,
-    fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.bgPrimary, // Match general dark background
+  },
+  emptyIcon: {
+    fontSize: 80,
+    marginBottom: theme.spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 28,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  filterPills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
+  emptyText: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
-  filterPill: {
+  statsContainer: {
+    position: 'absolute',
+    top: theme.spacing.lg,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+    zIndex: 10,
+    paddingHorizontal: theme.spacing.md,
+  },
+  statPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.bgCard,
+    borderRadius: theme.borderRadius.xxxl,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.bgSecondary,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    ...theme.shadows.glass,
+    gap: theme.spacing.xs,
   },
-  filterPillActive: {
-    backgroundColor: theme.colors.accentPrimary,
-    borderColor: theme.colors.accentPrimary,
+  statIcon: {
+    fontSize: 16,
   },
-  filterPillText: {
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.accentPrimary,
+  },
+  statLabel: {
     fontSize: 12,
     color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  filterPillTextActive: {
-    color: '#fff',
     fontWeight: '600',
   },
-  cardContainer: {
+  cardStackContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: theme.spacing.md,
-    paddingTop: 50, // Reduced padding to fit better with smaller filter button
-    paddingHorizontal: theme.spacing.sm,
+    alignItems: 'center',
+    paddingTop: 100,
+    paddingBottom: 120, // Reduced since no navigation buttons when cards available
+    paddingHorizontal: theme.spacing.md, // Added horizontal padding
+  },
+  cardStack: {
+    position: 'absolute',
+    width: SCREEN_WIDTH - 40,
+    height: SCREEN_HEIGHT * 0.6,
+    borderRadius: theme.borderRadius.xxxl,
+    overflow: 'hidden',
+  },
+  cardStackBack: {
+    backgroundColor: theme.colors.bgPrimary, // Solid background to prevent transparency
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    transform: [{ scale: 0.85 }, { translateY: 40 }],
+    opacity: 0.3, // More transparent so it doesn't interfere
+    zIndex: 1,
+  },
+  cardStackMiddle: {
+    backgroundColor: theme.colors.bgPrimary, // Solid background to prevent transparency
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    transform: [{ scale: 0.92 }, { translateY: 20 }],
+    opacity: 0.5, // More transparent so it doesn't interfere
+    zIndex: 2,
+  },
+  cardStackFront: {
+    zIndex: 3,
+  },
+  cardStackContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardStackAvatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+  },
+  cardStackAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardStackAvatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.colors.accentPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardStackAvatarText: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  filterButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: theme.spacing.md,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.colors.accentPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.glow,
+    zIndex: 100,
+  },
+  filterButtonIcon: {
+    fontSize: 24,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'flex-end',
-    alignItems: 'stretch',
   },
   modalContent: {
-    backgroundColor: theme.colors.bgCard,
-    borderTopLeftRadius: theme.borderRadius.xl,
-    borderTopRightRadius: theme.borderRadius.xl,
+    backgroundColor: 'rgba(10, 10, 21, 0.92)', // Translucent dark background matching app bgPrimary (#0a0a15)
+    borderTopLeftRadius: theme.borderRadius.xxxl,
+    borderTopRightRadius: theme.borderRadius.xxxl,
     maxHeight: '80%',
     padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-    minHeight: 200,
-    width: '100%',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -484,20 +576,20 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderColor,
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: theme.colors.bgSecondary,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   closeButtonText: {
-    fontSize: 18,
+    fontSize: 20,
     color: theme.colors.textPrimary,
     fontWeight: '600',
   },
@@ -508,10 +600,37 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xl,
   },
   filterSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
+  },
+  filterPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.md, // Increased spacing
+    marginBottom: theme.spacing.sm,
+  },
+  filterPill: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  filterPillActive: {
+    backgroundColor: theme.colors.accentPrimary,
+    borderColor: theme.colors.accentPrimary,
+  },
+  filterPillText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  filterPillTextActive: {
+    color: '#fff',
+    fontWeight: '700',
   },
   filterRow: {
     flexDirection: 'row',
@@ -524,29 +643,33 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing.md,
   },
   filterDescription: {
-    fontSize: 12,
+    fontSize: 14,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   distanceContainer: {
     marginTop: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.bgSecondary,
+    borderRadius: theme.borderRadius.xl,
   },
   distanceLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   distanceButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md, // Increased spacing
+    marginTop: theme.spacing.sm,
   },
   distanceButton: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.bgSecondary,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.bgCard,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
   },
@@ -555,72 +678,36 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.accentPrimary,
   },
   distanceButtonText: {
-    fontSize: 12,
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   distanceButtonTextActive: {
     color: '#fff',
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.bgPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: theme.colors.textSecondary,
-    fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.bgPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: 24,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
   },
-  emptyText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
-  statsSection: {
-    marginTop: theme.spacing.xl,
-    paddingTop: theme.spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
-  },
-  statsSectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-    textTransform: 'uppercase',
-  },
-  statItem: {
+  navigationButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  navButton: {
+    flex: 1,
+    backgroundColor: theme.colors.accentPrimary,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.xxxl,
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    ...theme.shadows.glow,
   },
-  statLabel: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
+  navButtonIcon: {
+    fontSize: 32,
   },
-  statValue: {
+  navButtonText: {
     fontSize: 16,
-    color: theme.colors.accentPrimary,
     fontWeight: '700',
+    color: '#fff',
   },
 });
-

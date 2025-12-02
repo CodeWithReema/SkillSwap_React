@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { userAPI, profileAPI, swipeAPI, matchAPI, photoAPI } from '../services/api';
 import DiscoverCard from '../components/DiscoverCard';
-import './Discover.css';
 
 const Discover = () => {
   const [users, setUsers] = useState([]);
@@ -15,6 +14,7 @@ const Discover = () => {
     locationEnabled: false,
     maxDistance: 50,
   });
+  const [showFilters, setShowFilters] = useState(false);
   const [stats, setStats] = useState({
     totalMatches: 0,
     activeChats: 0,
@@ -52,7 +52,6 @@ const Discover = () => {
 
       const swipedUserIds = new Set(swipes.map(s => s.swipee?.userId || s.swipee?.id));
 
-      // Merge user and profile data and load photos
       let filteredUsers = await Promise.all(
         allUsers
           .filter(user => user.userId !== currentUserId && !swipedUserIds.has(user.userId))
@@ -60,7 +59,6 @@ const Discover = () => {
             const profile = allProfiles.find(p => p.user?.userId === user.userId);
             let photoUrl = null;
             
-            // Load primary photo if profile exists
             if (profile?.profileId) {
               try {
                 const photos = await photoAPI.getByProfile(profile.profileId);
@@ -83,7 +81,6 @@ const Discover = () => {
           })
       );
 
-      // Calculate distances for all users if current user has location
       const currentUser = allUsers.find(u => u.userId === currentUserId);
       const currentProfile = allProfiles.find(p => p.user?.userId === currentUserId);
       const currentLat = currentProfile?.latitude || currentUser?.latitude;
@@ -97,14 +94,12 @@ const Discover = () => {
         });
       }
 
-      // Apply year filter
       if (filters.years.length > 0) {
         filteredUsers = filteredUsers.filter(user => {
           return user.profile && filters.years.includes(user.profile.year);
         });
       }
 
-      // Apply location filter
       if (filters.locationEnabled) {
         filteredUsers = filteredUsers.filter(user => {
           if (!user.latitude || !user.longitude) return false;
@@ -122,7 +117,7 @@ const Discover = () => {
   };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
@@ -176,110 +171,194 @@ const Discover = () => {
 
   if (loading) {
     return (
-      <div className="discover-loading">
-        <div className="spinner"></div>
+      <div className="min-h-screen flex items-center justify-center relative">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-glass-accent-primary rounded-full mix-blend-screen opacity-20 blur-3xl animate-pulse-slow"></div>
+        </div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-glass-accent-primary relative z-10"></div>
       </div>
     );
   }
 
   return (
-    <div className="discover-container">
-      <div className="discover-layout">
-        {/* Left Sidebar - Filters */}
-        <aside className="discover-sidebar">
-          <div className="filter-section">
-            <h3>Year</h3>
-            <div className="filter-pills">
-              {['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Faculty'].map(year => (
-                <button
-                  key={year}
-                  className={`filter-pill ${filters.years.includes(year) ? 'active' : ''}`}
-                  onClick={() => toggleYearFilter(year)}
-                >
-                  {year}
-                </button>
-              ))}
-            </div>
-          </div>
+    <div className="min-h-screen py-8 relative">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-glass-accent-primary rounded-full mix-blend-screen opacity-10 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-glass-accent-secondary rounded-full mix-blend-screen opacity-10 blur-3xl"></div>
+      </div>
 
-          <div className="filter-section">
-            <h3>Location</h3>
-            <label className="filter-checkbox">
-              <input
-                type="checkbox"
-                checked={filters.locationEnabled}
-                onChange={toggleLocationFilter}
-              />
-              <span>Show nearby users only</span>
-            </label>
-            {filters.locationEnabled && (
-              <div className="filter-range">
-                <label>Max distance: {filters.maxDistance} km</label>
-                <input
-                  type="range"
-                  min="5"
-                  max="200"
-                  step="5"
-                  value={filters.maxDistance}
-                  onChange={(e) => setFilters(prev => ({ ...prev, maxDistance: parseInt(e.target.value) }))}
-                />
+      <div className="container mx-auto px-6 relative z-10">
+        {/* Dashboard Style Layout - Completely Different */}
+        <div className="grid grid-cols-12 gap-6 mb-8">
+          {/* Left Column - Stats Dashboard Cards */}
+          <div className="col-span-12 lg:col-span-3 space-y-4">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="dashboard-card"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-glass-text-primary">Matches</h3>
+                <span className="text-3xl">💫</span>
               </div>
+              <div className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                {stats.totalMatches}
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="dashboard-card"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-glass-text-primary">Active Chats</h3>
+                <span className="text-3xl">💬</span>
+              </div>
+              <div className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                {stats.activeChats}
+              </div>
+            </motion.div>
+
+            {/* Filter Toggle */}
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="dashboard-card"
+            >
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="w-full btn btn-secondary flex items-center justify-center gap-2"
+              >
+                <span className="text-xl">🔍</span>
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </button>
+            </motion.div>
+          </div>
+
+          {/* Center - Main Card Area (Larger, More Prominent) */}
+          <div className="col-span-12 lg:col-span-6 flex items-center justify-center">
+            <div className="w-full max-w-2xl">
+              <AnimatePresence mode="wait">
+                {currentUser ? (
+                  <DiscoverCard
+                    key={currentUser.userId}
+                    user={currentUser}
+                    onSwipe={handleSwipe}
+                    onViewProfile={() => navigate(`/profile/${currentUser.userId}`)}
+                  />
+                ) : (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="glass-card text-center py-20"
+                  >
+                    <div className="text-7xl mb-6">✨</div>
+                    <h2 className="text-4xl font-bold text-glass-text-primary mb-4">No more users!</h2>
+                    <p className="text-glass-text-secondary text-xl">Check back later for new profiles.</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Right Column - Quick Actions & Filters */}
+          <div className="col-span-12 lg:col-span-3 space-y-4">
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="dashboard-card"
+              >
+                <h3 className="text-lg font-bold text-glass-text-primary mb-4 flex items-center gap-2">
+                  <span className="text-xl">🔍</span>
+                  Filters
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-glass-text-secondary mb-3">Year</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Faculty'].map(year => (
+                        <button
+                          key={year}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                            filters.years.includes(year)
+                              ? 'bg-gradient-primary text-white shadow-glass-lg shadow-glow-purple'
+                              : 'bg-glass-bg-card text-glass-text-secondary hover:bg-glass-bg-hover hover:text-glass-text-primary border border-glass-border'
+                          }`}
+                          onClick={() => toggleYearFilter(year)}
+                        >
+                          {year}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-3 cursor-pointer p-3 bg-glass-bg-card rounded-xl border border-glass-border hover:bg-glass-bg-hover transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={filters.locationEnabled}
+                        onChange={toggleLocationFilter}
+                        className="w-5 h-5 rounded border-glass-border bg-glass-bg-card text-glass-accent-primary focus:ring-glass-accent-primary"
+                      />
+                      <span className="text-glass-text-secondary text-sm">Show nearby users only</span>
+                    </label>
+                    {filters.locationEnabled && (
+                      <div className="mt-4 p-4 bg-glass-bg-card rounded-xl border border-glass-border">
+                        <label className="block text-sm text-glass-text-secondary mb-2">
+                          Max distance: {filters.maxDistance} km
+                        </label>
+                        <input
+                          type="range"
+                          min="5"
+                          max="200"
+                          step="5"
+                          value={filters.maxDistance}
+                          onChange={(e) => setFilters(prev => ({ ...prev, maxDistance: parseInt(e.target.value) }))}
+                          className="w-full h-2 bg-glass-bg-secondary rounded-lg appearance-none cursor-pointer accent-glass-accent-primary"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             )}
-          </div>
 
-          <div className="stats-section">
-            <h3>YOUR STATS</h3>
-            <div className="stat-item">
-              <span className="stat-label">Total Matches</span>
-              <span className="stat-value">{stats.totalMatches}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">Active Chats</span>
-              <span className="stat-value">{stats.activeChats}</span>
-            </div>
-          </div>
-        </aside>
-
-        {/* Center - Card Stack */}
-        <main className="discover-main">
-          <div className="card-stack">
-            <AnimatePresence mode="wait">
-              {currentUser ? (
-                <DiscoverCard
-                  key={currentUser.userId}
-                  user={currentUser}
-                  onSwipe={handleSwipe}
-                  onViewProfile={() => navigate(`/profile/${currentUser.userId}`)}
-                />
-              ) : (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="empty-state"
+            <motion.div 
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="dashboard-card"
+            >
+              <h3 className="text-lg font-bold text-glass-text-primary mb-4 flex items-center gap-2">
+                <span className="text-xl">⚡</span>
+                Quick Actions
+              </h3>
+              <div className="space-y-3">
+                <button
+                  className="w-full btn btn-primary text-sm"
+                  onClick={() => navigate('/matches')}
                 >
-                  <h2>No more users!</h2>
-                  <p>Check back later for new profiles.</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  View All Matches
+                </button>
+                <button
+                  className="w-full btn btn-secondary text-sm"
+                  onClick={() => navigate('/messages')}
+                >
+                  Open Messages
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </main>
-
-        {/* Right Sidebar - Quick Actions */}
-        <aside className="discover-sidebar-right">
-          <button
-            className="btn btn-primary btn-block"
-            onClick={() => navigate('/matches')}
-          >
-            View All Matches
-          </button>
-        </aside>
+        </div>
       </div>
     </div>
   );
 };
 
 export default Discover;
-

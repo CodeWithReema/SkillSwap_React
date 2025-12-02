@@ -469,15 +469,52 @@ export default function Profile() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}
     >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="interactive"
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+        {/* Profile Header Card - Unique Design */}
+        <View style={styles.headerCard}>
+          <View style={styles.headerGradient}>
+            {photos.length > 0 && photos[0]?.photoUrl ? (
+              <Image
+                source={{ uri: photos[0].photoUrl }}
+                style={styles.headerPhoto}
+              />
+            ) : (
+              <View style={styles.headerPhotoPlaceholder}>
+                <Text style={styles.headerPhotoText}>
+                  {formData.firstName?.[0] || 'U'}{formData.lastName?.[0] || ''}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.uploadPhotoButton}
+              onPress={handlePhotoUpload}
+            >
+              <Text style={styles.uploadPhotoIcon}>📷</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerName}>
+              {formData.firstName} {formData.lastName}
+            </Text>
+            {formData.major && (
+              <Text style={styles.headerMajor}>{formData.major}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Dashboard Grid - Unique Layout */}
+        <View style={styles.dashboardGrid}>
+          {/* Basic Info Card */}
+          <View style={styles.dashboardCard}>
+            <Text style={styles.cardTitle}>👤 Basic Info</Text>
           
           <View style={styles.inputRow}>
             <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -570,30 +607,6 @@ export default function Profile() {
               />
             </View>
           </View>
-        </View>
-
-        {/* Profile Photos Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile Photos</Text>
-          <View style={styles.photoSection}>
-            {photos.length > 0 && photos[0]?.photoUrl ? (
-              <Image
-                source={{ uri: photos[0].photoUrl }}
-                style={styles.profilePhoto}
-              />
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Text style={styles.photoPlaceholderText}>
-                  {formData.firstName?.[0] || 'U'}{formData.lastName?.[0] || ''}
-                </Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={handlePhotoUpload}
-            >
-              <Text style={styles.uploadButtonText}>📷 Upload Photo</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -891,18 +904,35 @@ export default function Profile() {
                 </TouchableOpacity>
               ))}
             </View>
+            <Text style={styles.label}>Options</Text>
             <View style={styles.checkboxRow}>
               <TouchableOpacity
-                style={styles.checkbox}
+                style={[
+                  styles.checkboxButton,
+                  newSkill.offering && styles.checkboxButtonActive
+                ]}
                 onPress={() => setNewSkill(prev => ({ ...prev, offering: !prev.offering }))}
               >
-                <Text>{newSkill.offering ? '☑' : '☐'} Offering</Text>
+                <Text style={[
+                  styles.checkboxButtonText,
+                  newSkill.offering && styles.checkboxButtonTextActive
+                ]}>
+                  {newSkill.offering ? '✓' : ''} Offering
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.checkbox}
+                style={[
+                  styles.checkboxButton,
+                  newSkill.seeking && styles.checkboxButtonActive
+                ]}
                 onPress={() => setNewSkill(prev => ({ ...prev, seeking: !prev.seeking }))}
               >
-                <Text>{newSkill.seeking ? '☑' : '☐'} Seeking</Text>
+                <Text style={[
+                  styles.checkboxButtonText,
+                  newSkill.seeking && styles.checkboxButtonTextActive
+                ]}>
+                  {newSkill.seeking ? '✓' : ''} Seeking
+                </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.modalButtons}>
@@ -940,13 +970,26 @@ export default function Profile() {
               value={newInterest.interestName}
               onChangeText={(text) => setNewInterest(prev => ({ ...prev, interestName: text }))}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Category (optional)"
-              placeholderTextColor={theme.colors.textMuted}
-              value={newInterest.category}
-              onChangeText={(text) => setNewInterest(prev => ({ ...prev, category: text }))}
-            />
+            <Text style={styles.label}>Category (optional)</Text>
+            <View style={styles.pickerRow}>
+              {['', 'Technology', 'Arts', 'Sports', 'Music', 'Travel', 'Food', 'Gaming', 'Reading', 'Other'].map((cat) => (
+                <TouchableOpacity
+                  key={cat || 'none'}
+                  style={[
+                    styles.pickerOption,
+                    newInterest.category === cat && styles.pickerOptionSelected
+                  ]}
+                  onPress={() => setNewInterest(prev => ({ ...prev, category: cat }))}
+                >
+                  <Text style={[
+                    styles.pickerOptionText,
+                    newInterest.category === cat && styles.pickerOptionTextSelected
+                  ]}>
+                    {cat || 'None'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
@@ -1017,13 +1060,26 @@ export default function Profile() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Language</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Language name"
-              placeholderTextColor={theme.colors.textMuted}
-              value={newLanguage.languageName}
-              onChangeText={(text) => setNewLanguage(prev => ({ ...prev, languageName: text }))}
-            />
+            <Text style={styles.label}>Language</Text>
+            <View style={styles.pickerRow}>
+              {['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Portuguese', 'Italian'].map((lang) => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[
+                    styles.pickerOption,
+                    newLanguage.languageName === lang && styles.pickerOptionSelected
+                  ]}
+                  onPress={() => setNewLanguage(prev => ({ ...prev, languageName: lang }))}
+                >
+                  <Text style={[
+                    styles.pickerOptionText,
+                    newLanguage.languageName === lang && styles.pickerOptionTextSelected
+                  ]}>
+                    {lang}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <Text style={styles.label}>Proficiency Level</Text>
             <View style={styles.pickerRow}>
               {['Native', 'Fluent', 'Conversational', 'Basic'].map((level) => (
@@ -1114,24 +1170,110 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
-    gap: theme.spacing.lg,
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xxl,
   },
-  section: {
+  headerCard: {
     backgroundColor: theme.colors.bgCard,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: theme.borderRadius.xxxl,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    ...theme.shadows.glass,
+  },
+  headerGradient: {
+    height: 200,
+    backgroundColor: theme.colors.accentPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerPhoto: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  headerPhotoPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  headerPhotoText: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  uploadPhotoButton: {
+    position: 'absolute',
+    bottom: theme.spacing.md,
+    right: theme.spacing.md,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  uploadPhotoIcon: {
+    fontSize: 24,
+  },
+  headerInfo: {
+    padding: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  headerName: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  headerMajor: {
+    fontSize: 18,
+    color: theme.colors.accentPrimary,
+    fontWeight: '600',
+  },
+  dashboardGrid: {
+    gap: theme.spacing.md,
+  },
+  dashboardCard: {
+    backgroundColor: theme.colors.bgCard,
+    borderRadius: theme.borderRadius.xxxl,
     padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    ...theme.shadows.glass,
+    marginBottom: theme.spacing.md,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.lg,
-    borderBottomWidth: 2,
-    borderBottomColor: theme.colors.borderColor,
-    paddingBottom: theme.spacing.sm,
+  },
+  section: {
+    backgroundColor: theme.colors.bgCard,
+    borderRadius: theme.borderRadius.xxxl,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    ...theme.shadows.glass,
+    marginBottom: theme.spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
   },
   inputRow: {
     flexDirection: 'row',
@@ -1147,7 +1289,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   input: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: theme.colors.bgPrimary, // More opaque background for visibility
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     borderRadius: theme.borderRadius.md,
@@ -1363,7 +1505,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: theme.colors.bgCard,
+    backgroundColor: theme.colors.bgPrimary, // More opaque for visibility
     borderTopLeftRadius: theme.borderRadius.lg,
     borderTopRightRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
@@ -1403,12 +1545,35 @@ const styles = StyleSheet.create({
   },
   checkboxRow: {
     flexDirection: 'row',
-    gap: theme.spacing.lg,
+    gap: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   checkbox: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  checkboxButton: {
+    flex: 1,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.xl,
+    borderWidth: 2,
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.bgSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxButtonActive: {
+    backgroundColor: theme.colors.accentPrimary,
+    borderColor: theme.colors.accentPrimary,
+  },
+  checkboxButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  checkboxButtonTextActive: {
+    color: '#fff',
+    fontWeight: '700',
   },
   modalButtons: {
     flexDirection: 'row',

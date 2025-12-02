@@ -6,14 +6,17 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
-  ScrollView,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useNotifications } from '../../src/contexts/NotificationContext';
 import { matchAPI, userAPI, profileAPI, photoAPI } from '../../src/services/api';
 import { theme } from '../../src/styles/theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2; // 2 columns with gaps
 
 export default function Matches() {
   const [matches, setMatches] = useState([]);
@@ -23,7 +26,6 @@ export default function Matches() {
   const { clearMatchNotifications } = useNotifications();
   const router = useRouter();
 
-  // Clear notifications when tab comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (clearMatchNotifications) {
@@ -33,7 +35,6 @@ export default function Matches() {
   );
 
   useEffect(() => {
-    // Only show loading on initial mount
     const initialLoad = async () => {
       setLoading(true);
       await loadMatches();
@@ -48,7 +49,6 @@ export default function Matches() {
       if (isRefresh) {
         setRefreshing(true);
       } else if (loading) {
-        // Only set loading on initial load
         setLoading(true);
       }
       
@@ -65,7 +65,6 @@ export default function Matches() {
         return user1Id === userId || user2Id === userId;
       });
 
-      // Enrich matches with user data and photos
       const enrichedMatches = await Promise.all(
         userMatches.map(async (match) => {
           const user1Id = match.user1?.userId || match.user1?.id;
@@ -74,7 +73,6 @@ export default function Matches() {
           const otherUser = allUsers.find(u => u.userId === otherUserId);
           const otherProfile = allProfiles.find(p => p.user?.userId === otherUserId);
           
-          // Load photo
           let photoUrl = null;
           if (otherProfile?.profileId) {
             try {
@@ -89,14 +87,13 @@ export default function Matches() {
           return {
             ...match,
             otherUser,
+            otherProfile,
             photoUrl,
           };
         })
       );
 
-      // Filter out matches where otherUser is null (user might have been deleted)
       const validMatches = enrichedMatches.filter(match => match.otherUser != null);
-
       setMatches(validMatches);
     } catch (error) {
       console.error('Error loading matches:', error);
@@ -110,33 +107,75 @@ export default function Matches() {
     loadMatches(true);
   };
 
-  const renderMatch = ({ item }) => (
-    <TouchableOpacity
-      style={styles.matchCard}
-      onPress={() => router.push(`/profile/${item.otherUser?.userId}`)}
-    >
-      {item.photoUrl ? (
-        <Image source={{ uri: item.photoUrl }} style={styles.avatarImage} />
-      ) : (
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {item.otherUser?.firstName?.[0]}{item.otherUser?.lastName?.[0]}
-          </Text>
-        </View>
-      )}
-      <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>
-          {item.otherUser?.firstName} {item.otherUser?.lastName}
-        </Text>
-      </View>
+  const renderMatch = ({ item, index }) => {
+    // Staggered layout - alternate heights and positions
+    const isEven = index % 2 === 0;
+    const cardHeight = isEven ? 280 : 320;
+    const rotation = isEven ? -1.5 : 1.5;
+    
+    return (
       <TouchableOpacity
-        style={styles.messageButton}
-        onPress={() => router.push('/(tabs)/messages')}
+        style={[
+          styles.matchCard,
+          { 
+            height: cardHeight,
+            transform: [{ rotate: `${rotation}deg` }],
+            marginTop: isEven ? 0 : 20, // Staggered positioning
+          }
+        ]}
+        onPress={() => router.push(`/profile/${item.otherUser?.userId}`)}
+        activeOpacity={0.9}
       >
-        <Text style={styles.messageButtonText}>Message</Text>
+        {/* Hexagonal Top Section */}
+        <View style={styles.cardTop}>
+          <View style={styles.hexagonContainer}>
+            {item.photoUrl ? (
+              <Image source={{ uri: item.photoUrl }} style={styles.hexagonImage} />
+            ) : (
+              <View style={styles.hexagonPlaceholder}>
+                <Text style={styles.hexagonText}>
+                  {item.otherUser?.firstName?.[0]}{item.otherUser?.lastName?.[0]}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Content Section */}
+        <View style={styles.cardContent}>
+          <Text style={styles.matchName} numberOfLines={1}>
+            {item.otherUser?.firstName} {item.otherUser?.lastName}
+          </Text>
+          {item.otherProfile?.major && (
+            <Text style={styles.matchMajor} numberOfLines={1}>
+              {item.otherProfile.major}
+            </Text>
+          )}
+          {item.otherProfile?.bio && (
+            <Text style={styles.matchBio} numberOfLines={2}>
+              {item.otherProfile.bio}
+            </Text>
+          )}
+        </View>
+
+        {/* Action Buttons - Bottom */}
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={styles.viewButton}
+            onPress={() => router.push(`/profile/${item.otherUser?.userId}`)}
+          >
+            <Text style={styles.viewButtonText}>View</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.messageButton}
+            onPress={() => router.push('/(tabs)/messages')}
+          >
+            <Text style={styles.messageButtonText}>💬</Text>
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -148,8 +187,10 @@ export default function Matches() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your Matches</Text>
-      <Text style={styles.subtitle}>{matches.length} {matches.length === 1 ? 'match' : 'matches'}</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Your Matches</Text>
+        <Text style={styles.subtitle}>{matches.length} {matches.length === 1 ? 'match' : 'matches'}</Text>
+      </View>
       
       <FlatList
         data={matches}
@@ -158,6 +199,7 @@ export default function Matches() {
         contentContainerStyle={matches.length === 0 ? styles.emptyContainer : styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>💫</Text>
             <Text style={styles.emptyText}>No matches yet</Text>
             <Text style={styles.emptySubtext}>Start swiping to find your skill exchange partners!</Text>
           </View>
@@ -165,6 +207,9 @@ export default function Matches() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -174,78 +219,138 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.bgPrimary,
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
+  header: {
     marginBottom: theme.spacing.lg,
   },
+  title: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: theme.colors.textSecondary,
+  },
   listContent: {
-    gap: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
+  },
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
   },
   matchCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    width: CARD_WIDTH,
     backgroundColor: theme.colors.bgCard,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.xxxl,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    gap: theme.spacing.md,
+    ...theme.shadows.glass,
   },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  cardTop: {
+    height: 140,
     backgroundColor: theme.colors.accentPrimary,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
-  avatarImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: theme.colors.accentPrimary,
+  hexagonContainer: {
+    width: 100,
+    height: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: 24,
+  hexagonImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  hexagonPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  hexagonText: {
+    fontSize: 32,
     fontWeight: '700',
     color: '#fff',
   },
-  matchInfo: {
+  cardContent: {
+    padding: theme.spacing.md,
     flex: 1,
+    justifyContent: 'space-between',
   },
   matchName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  matchMajor: {
+    fontSize: 14,
+    color: theme.colors.accentPrimary,
+    fontWeight: '600',
+    marginBottom: theme.spacing.xs,
+  },
+  matchBio: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 16,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+  },
+  viewButton: {
+    flex: 1,
+    backgroundColor: theme.colors.bgSecondary,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.xl,
+    alignItems: 'center',
+  },
+  viewButtonText: {
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 12,
   },
   messageButton: {
+    width: 40,
+    height: 40,
     backgroundColor: theme.colors.accentPrimary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadows.glass,
   },
   messageButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    fontSize: 18,
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: theme.spacing.xxl,
+  },
+  emptyIcon: {
+    fontSize: 80,
+    marginBottom: theme.spacing.lg,
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
@@ -253,6 +358,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+    paddingHorizontal: theme.spacing.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -265,4 +371,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

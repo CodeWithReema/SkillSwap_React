@@ -70,12 +70,6 @@ export default function ViewProfile() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-      >
-        <Text style={styles.backButtonText}>← Back</Text>
-      </TouchableOpacity>
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
@@ -233,20 +227,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginTop: theme.spacing.xl,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    backgroundColor: theme.colors.bgCard,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  backButtonText: {
-    color: theme.colors.accentPrimary,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

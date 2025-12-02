@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { matchAPI, messageAPI, userAPI } from '../services/api';
-import './Messages.css';
 
 const Messages = () => {
   const [matches, setMatches] = useState([]);
@@ -15,7 +15,6 @@ const Messages = () => {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    // Clear message notifications when user visits messages page
     clearMessageNotifications();
   }, [clearMessageNotifications]);
 
@@ -28,7 +27,6 @@ const Messages = () => {
     if (selectedMatch) {
       loadMessages(selectedMatch.matchId);
       
-      // Set up polling to refresh messages every 2 seconds
       const interval = setInterval(() => {
         loadMessages(selectedMatch.matchId);
       }, 2000);
@@ -84,8 +82,6 @@ const Messages = () => {
   const loadMessages = async (matchId) => {
     try {
       const allMessages = await messageAPI.getByMatch(matchId);
-      // Backend returns messages in ascending order (oldest first)
-      // Keep as-is: oldest at top, newest at bottom
       setMessages(allMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -112,99 +108,161 @@ const Messages = () => {
 
   if (loading) {
     return (
-      <div className="messages-loading">
-        <div className="spinner"></div>
+      <div className="min-h-screen flex items-center justify-center relative">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-glass-accent-primary rounded-full mix-blend-screen opacity-20 blur-3xl animate-pulse-slow"></div>
+        </div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-glass-accent-primary relative z-10"></div>
       </div>
     );
   }
 
   return (
-    <div className="messages-container">
-      <div className="messages-layout">
-        {/* Conversations List */}
-        <aside className="conversations-sidebar">
-          <h2>Conversations</h2>
-          {matches.length === 0 ? (
-            <div className="empty-conversations">
-              <p>No conversations yet</p>
-            </div>
-          ) : (
-            <div className="conversations-list">
-              {matches.map(match => (
-                <div
-                  key={match.matchId}
-                  className={`conversation-item ${selectedMatch?.matchId === match.matchId ? 'active' : ''}`}
-                  onClick={() => setSelectedMatch(match)}
-                >
-                  <div className="conversation-avatar">
-                    {match.otherUser?.firstName?.[0]}{match.otherUser?.lastName?.[0]}
-                  </div>
-                  <div className="conversation-info">
-                    <div className="conversation-name">
-                      {match.otherUser?.firstName} {match.otherUser?.lastName}
-                    </div>
-                  </div>
+    <div className="min-h-screen py-12 relative">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-glass-accent-primary rounded-full mix-blend-screen opacity-10 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-glass-accent-secondary rounded-full mix-blend-screen opacity-10 blur-3xl"></div>
+      </div>
+
+      <div className="container mx-auto px-6 relative z-10">
+        {/* Split Screen Layout - Completely Different */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-8rem)]">
+          {/* Left Sidebar - Vertical Conversation List */}
+          <aside className="lg:col-span-2">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="glass-card h-full flex flex-col"
+            >
+              <h2 className="text-3xl font-bold text-glass-text-primary mb-6 flex items-center gap-3">
+                <span className="text-3xl">💬</span>
+                Conversations
+              </h2>
+              {matches.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-glass-text-secondary text-lg">No conversations yet</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </aside>
-
-        {/* Messages Area */}
-        <main className="messages-main">
-          {selectedMatch ? (
-            <>
-              <div className="messages-header">
-                <h3>
-                  {selectedMatch.otherUser?.firstName} {selectedMatch.otherUser?.lastName}
-                </h3>
-              </div>
-
-              <div className="messages-list">
-                {messages.length === 0 ? (
-                  <div className="empty-messages">
-                    <p>No messages yet. Start the conversation!</p>
-                  </div>
-                ) : (
-                  messages.map(message => {
-                    const isOwn = (message.sender?.userId || message.sender?.id) === getCurrentUserId();
-                    return (
-                      <div key={message.messageId} className={`message ${isOwn ? 'own' : 'other'}`}>
-                        <div className="message-content">{message.messageContent || message.content}</div>
-                        <div className="message-time">
-                          {new Date(message.timestamp || message.sentAt).toLocaleTimeString()}
+              ) : (
+                <div className="flex-1 overflow-y-auto space-y-3">
+                  {matches.map((match, index) => (
+                    <motion.div
+                      key={match.matchId}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`p-5 rounded-2xl cursor-pointer transition-all duration-200 ${
+                        selectedMatch?.matchId === match.matchId
+                          ? 'bg-glass-bg-light border-2 border-glass-accent-primary shadow-glass-lg shadow-glow-purple'
+                          : 'bg-glass-bg-card hover:bg-glass-bg-hover border-2 border-transparent hover:border-glass-border'
+                      }`}
+                      onClick={() => setSelectedMatch(match)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center text-white font-semibold text-xl shadow-glass">
+                          {match.otherUser?.firstName?.[0]}{match.otherUser?.lastName?.[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-glass-text-primary text-lg truncate">
+                            {match.otherUser?.firstName} {match.otherUser?.lastName}
+                          </div>
                         </div>
                       </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </aside>
 
-              <form onSubmit={sendMessage} className="message-input-form">
-                <input
-                  type="text"
-                  className="input"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  autoComplete="off"
-                />
-                <button type="submit" className="btn btn-primary">
-                  Send
-                </button>
-              </form>
-            </>
-          ) : (
-            <div className="no-selection">
-              <p>Select a conversation to start messaging</p>
-            </div>
-          )}
-        </main>
+          {/* Right Side - Chat Area */}
+          <main className="lg:col-span-3">
+            <motion.div 
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="glass-card h-full flex flex-col"
+            >
+              {selectedMatch ? (
+                <>
+                  {/* Header with Gradient Background */}
+                  <div className="bg-gradient-primary p-6 rounded-t-3xl -mt-8 -mx-8 mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-semibold text-xl border-2 border-white/30 shadow-glass-xl">
+                        {selectedMatch.otherUser?.firstName?.[0]}{selectedMatch.otherUser?.lastName?.[0]}
+                      </div>
+                      <h3 className="text-2xl font-bold text-white">
+                        {selectedMatch.otherUser?.firstName} {selectedMatch.otherUser?.lastName}
+                      </h3>
+                    </div>
+                  </div>
+
+                  {/* Messages Area - Chat Bubbles */}
+                  <div className="flex-1 overflow-y-auto space-y-4 mb-6 px-2">
+                    {messages.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <div className="text-7xl mb-6">💭</div>
+                          <p className="text-glass-text-secondary text-xl">No messages yet. Start the conversation!</p>
+                        </div>
+                      </div>
+                    ) : (
+                      messages.map((message, index) => {
+                        const isOwn = (message.sender?.userId || message.sender?.id) === getCurrentUserId();
+                        return (
+                          <motion.div
+                            key={message.messageId}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[75%] rounded-3xl px-6 py-4 ${
+                                isOwn
+                                  ? 'bg-gradient-primary text-white shadow-glass-lg'
+                                  : 'bg-glass-bg-card text-glass-text-primary border border-glass-border'
+                              }`}
+                            >
+                              <div className="text-base leading-relaxed">{message.messageContent || message.content}</div>
+                              <div className={`text-xs mt-2 ${isOwn ? 'text-white/70' : 'text-glass-text-muted'}`}>
+                                {new Date(message.timestamp || message.sentAt).toLocaleTimeString()}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  {/* Input Area */}
+                  <form onSubmit={sendMessage} className="flex gap-3">
+                    <input
+                      type="text"
+                      className="input flex-1"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      autoComplete="off"
+                    />
+                    <button type="submit" className="btn btn-primary px-8">
+                      Send
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="text-7xl mb-6">💬</div>
+                    <p className="text-glass-text-secondary text-xl">Select a conversation to start messaging</p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </main>
+        </div>
       </div>
     </div>
   );
 };
 
 export default Messages;
-
