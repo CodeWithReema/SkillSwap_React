@@ -67,6 +67,15 @@
   box-shadow: var(--shadow-lg);
 }
 
+.avatar-image {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: var(--shadow-lg);
+  border: 3px solid var(--accent-primary);
+}
+
 .card-content {
   display: flex;
   flex-direction: column;

@@ -40,9 +40,17 @@ const DiscoverCard = ({ user, onSwipe, onViewProfile }) => {
       </div>
 
       <div className="card-image">
-        <div className="avatar-placeholder">
-          {user.firstName?.[0]}{user.lastName?.[0]}
-        </div>
+        {user.photoUrl ? (
+          <img
+            src={user.photoUrl}
+            alt={`${user.firstName} ${user.lastName}`}
+            className="avatar-image"
+          />
+        ) : (
+          <div className="avatar-placeholder">
+            {user.firstName?.[0]}{user.lastName?.[0]}
+          </div>
+        )}
       </div>
 
       <div className="card-content">

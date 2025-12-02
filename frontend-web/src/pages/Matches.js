@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { matchAPI, profileAPI, userAPI } from '../services/api';
 import './Matches.css';
 
@@ -8,6 +9,12 @@ const Matches = () => {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const { getCurrentUserId } = useAuth();
+  const { clearMatchNotifications } = useNotifications();
+
+  useEffect(() => {
+    // Clear match notifications when user visits matches page
+    clearMatchNotifications();
+  }, [clearMatchNotifications]);
   const navigate = useNavigate();
 
   useEffect(() => {

@@ -1,7 +1,24 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useNotifications } from '../../src/contexts/NotificationContext';
+import { View, Text, StyleSheet } from 'react-native';
+
+function TabIconWithBadge({ name, color, size, badgeCount }) {
+  return (
+    <View style={styles.iconContainer}>
+      <Ionicons name={name} size={size} color={color} />
+      {badgeCount > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badgeCount > 9 ? '9+' : badgeCount}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function TabsLayout() {
+  const { unreadMatches, unreadMessages } = useNotifications();
+
   return (
     <Tabs
       screenOptions={{
@@ -31,7 +48,7 @@ export default function TabsLayout() {
         options={{
           title: 'Matches',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="heart" size={size} color={color} />
+            <TabIconWithBadge name="heart" color={color} size={size} badgeCount={unreadMatches} />
           ),
         }}
       />
@@ -40,7 +57,7 @@ export default function TabsLayout() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+            <TabIconWithBadge name="chatbubbles" color={color} size={size} badgeCount={unreadMessages} />
           ),
         }}
       />
@@ -56,4 +73,29 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -8,
+    right: -12,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#1a1a2e',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+});
 
