@@ -11,11 +11,12 @@ import {
   ScrollView,
   Switch,
   Pressable,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useNotifications } from '../../src/contexts/NotificationContext';
-import { userAPI, profileAPI, swipeAPI, photoAPI, matchAPI } from '../../src/services/api';
+import api, { userAPI, profileAPI, swipeAPI, photoAPI, matchAPI } from '../../src/services/api';
 import { theme } from '../../src/styles/theme';
 import DiscoverCard from '../../src/components/DiscoverCard';
 
@@ -62,6 +63,23 @@ export default function Discover() {
     }
   };
 
+  // Convert relative photo URLs to absolute URLs
+  const toAbsoluteUrl = (url) => {
+    if (!url) return null;
+    try {
+      // If already absolute URL, return as-is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      // Get API base URL from axios instance
+      const baseURL = api.defaults?.baseURL || 'http://localhost:8080';
+      return url.startsWith('/') ? `${baseURL}${url}` : `${baseURL}/${url}`;
+    } catch (e) {
+      console.error('Error converting photo URL:', e, url);
+      return url;
+    }
+  };
+
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -83,7 +101,7 @@ export default function Discover() {
             try {
               const photos = await photoAPI.getByProfile(profile.profileId);
               const primaryPhoto = photos.find(p => p.isPrimary) || photos[0];
-              photoUrl = primaryPhoto?.photoUrl;
+              photoUrl = primaryPhoto?.photoUrl ? toAbsoluteUrl(primaryPhoto.photoUrl) : null;
             } catch (error) {
               console.error(`Error loading photo for user ${user.userId}:`, error);
             }

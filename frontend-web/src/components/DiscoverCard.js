@@ -3,6 +3,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion';
 
 const DiscoverCard = ({ user, onSwipe, onViewProfile }) => {
   const [exitX, setExitX] = useState(0);
+  const [imageError, setImageError] = useState(false);
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-25, 25]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
@@ -38,18 +39,18 @@ const DiscoverCard = ({ user, onSwipe, onViewProfile }) => {
       
       <div className="relative z-10">
         <div className="flex justify-between items-start mb-6">
-          <div className="flex-1">
-            <h2 className="text-4xl font-bold text-glass-text-primary mb-2 bg-gradient-primary bg-clip-text text-transparent">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-4xl font-bold text-glass-text-primary mb-2 bg-gradient-primary bg-clip-text text-transparent truncate">
               {user.firstName} {user.lastName}
             </h2>
             <div className="flex items-center gap-2 text-glass-text-secondary">
-              <span className="text-lg">🎓</span>
-              <span className="text-lg">{user.university || 'University'}</span>
+              <span className="text-lg flex-shrink-0">🎓</span>
+              <span className="text-lg truncate">{user.university || 'University'}</span>
             </div>
           </div>
           <button 
             onClick={onViewProfile}
-            className="text-glass-accent-primary hover:text-glass-accent-secondary text-sm font-semibold transition-colors px-4 py-2 rounded-xl bg-glass-bg-card border border-glass-border hover:border-glass-border-light transform hover:scale-105"
+            className="text-glass-accent-primary hover:text-glass-accent-secondary text-sm font-semibold transition-colors px-4 py-2 rounded-xl bg-glass-bg-card border border-glass-border hover:border-glass-border-light transform hover:scale-105 flex-shrink-0 ml-4"
           >
             View Profile →
           </button>
@@ -57,12 +58,14 @@ const DiscoverCard = ({ user, onSwipe, onViewProfile }) => {
 
         {/* Large Profile Image - Different Layout */}
         <div className="flex justify-center mb-8">
-          {user.photoUrl ? (
+          {user.photoUrl && !imageError ? (
             <div className="relative">
               <img
                 src={user.photoUrl}
                 alt={`${user.firstName} ${user.lastName}`}
                 className="w-64 h-64 rounded-3xl object-cover border-2 border-glass-border shadow-glass-xl"
+                onError={() => setImageError(true)}
+                onLoad={() => setImageError(false)}
               />
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-glass-accent-primary/20 to-glass-accent-secondary/20 pointer-events-none"></div>
             </div>
@@ -74,23 +77,29 @@ const DiscoverCard = ({ user, onSwipe, onViewProfile }) => {
         </div>
 
         {/* Info Grid - Different Layout */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          {user.major && (
-            <div className="dashboard-card p-4">
-              <div className="text-2xl mb-2">📚</div>
-              <div className="text-sm text-glass-text-secondary mb-1">Major</div>
-              <div className="text-lg font-semibold text-glass-text-primary">{user.major}</div>
+        <div className="space-y-4 mb-8">
+          {(user.major || user.location) && (
+            <div className="grid grid-cols-2 gap-4">
+              {user.major && (
+                <div className="dashboard-card p-4">
+                  <div className="text-2xl mb-2">📚</div>
+                  <div className="text-sm text-glass-text-secondary mb-1">Major</div>
+                  <div className="text-lg font-semibold text-glass-text-primary">{user.major}</div>
+                </div>
+              )}
+              {user.location && (
+                <div className="dashboard-card p-4">
+                  <div className="text-2xl mb-2">📍</div>
+                  <div className="text-sm text-glass-text-secondary mb-1">Location</div>
+                  <div className="text-lg font-semibold text-glass-text-primary truncate" title={user.location}>
+                    {user.location}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          {user.location && (
+          {user._distance !== undefined && user._distance !== null && (
             <div className="dashboard-card p-4">
-              <div className="text-2xl mb-2">📍</div>
-              <div className="text-sm text-glass-text-secondary mb-1">Location</div>
-              <div className="text-lg font-semibold text-glass-text-primary">{user.location}</div>
-            </div>
-          )}
-          {user._distance !== undefined && (
-            <div className="dashboard-card p-4 col-span-2">
               <div className="text-2xl mb-2">📏</div>
               <div className="text-sm text-glass-text-secondary mb-1">Distance</div>
               <div className="text-lg font-semibold text-glass-accent-primary">

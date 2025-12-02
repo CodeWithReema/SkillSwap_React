@@ -21,7 +21,9 @@ public class ProfileController {
 
     @GetMapping
     public List<Profile> getAllProfiles() {
-        return repo.findAll();
+        // Use findAllWithUser to eagerly load user relationship
+        // This ensures profiles have their user object populated for frontend matching
+        return repo.findAllWithUser();
     }
 
     @PostMapping

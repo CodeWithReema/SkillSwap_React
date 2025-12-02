@@ -22,6 +22,22 @@ const Discover = () => {
   const { getCurrentUserId } = useAuth();
   const navigate = useNavigate();
 
+  // Convert relative photo URLs to absolute URLs
+  const toAbsoluteUrl = (url) => {
+    if (!url) return null;
+    try {
+      // If already absolute URL, return as-is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      const base = process.env.REACT_APP_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080');
+      return new URL(url, base).toString();
+    } catch (e) {
+      console.error('Error converting photo URL:', e, url);
+      return url;
+    }
+  };
+
   useEffect(() => {
     loadStats();
     loadUsers();
@@ -63,7 +79,7 @@ const Discover = () => {
               try {
                 const photos = await photoAPI.getByProfile(profile.profileId);
                 const primaryPhoto = photos.find(p => p.isPrimary) || photos[0];
-                photoUrl = primaryPhoto?.photoUrl;
+                photoUrl = primaryPhoto?.photoUrl ? toAbsoluteUrl(primaryPhoto.photoUrl) : null;
               } catch (error) {
                 console.error(`Error loading photo for user ${user.userId}:`, error);
               }

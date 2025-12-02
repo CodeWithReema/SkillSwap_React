@@ -35,10 +35,10 @@ SELECT user_id,
     ELSE 'Engineering student interested in robotics and automation. Seeking study partners and project collaborators.'
   END,
   CASE (user_id % 4)
-    WHEN 0 THEN 'Atlanta, GA'
-    WHEN 1 THEN 'New York, NY'
-    WHEN 2 THEN 'Los Angeles, CA'
-    ELSE 'Chicago, IL'
+    WHEN 0 THEN 'Atlanta, Georgia'
+    WHEN 1 THEN 'New York, New York'
+    WHEN 2 THEN 'Los Angeles, California'
+    ELSE 'Chicago, Illinois'
   END,
   TRUE
 FROM users
@@ -119,4 +119,32 @@ VALUES
   (7, 'Research Group', 'Member'),
   (8, 'Finance Club', 'Member'),
   (8, 'Investment Society', 'Member');
+
+-- Insert profile photos for test users
+-- Note: These use placeholder filenames. You can replace these with actual photo files
+-- by copying images to the uploads/ directory with these exact filenames.
+-- Or use the populate-photos.ps1 script to automatically assign photos.
+INSERT INTO profile_photo (profile_id, photo_url, is_primary, uploaded_at)
+SELECT 
+  p.profile_id,
+  '/uploads/' || 
+  CASE u.email
+    WHEN 'alice.johnson@university.edu' THEN 'alice-profile.jpg'
+    WHEN 'bob.smith@university.edu' THEN 'bob-profile.jpg'
+    WHEN 'charlie.brown@university.edu' THEN 'charlie-profile.jpg'
+    WHEN 'diana.prince@university.edu' THEN 'diana-profile.jpg'
+    WHEN 'emma.watson@university.edu' THEN 'emma-profile.jpg'
+    WHEN 'frank.miller@university.edu' THEN 'frank-profile.jpg'
+    WHEN 'grace.hopper@university.edu' THEN 'grace-profile.jpg'
+    WHEN 'henry.ford@university.edu' THEN 'henry-profile.jpg'
+    ELSE 'default-profile.jpg'
+  END,
+  TRUE,
+  CURRENT_TIMESTAMP
+FROM profile p
+JOIN users u ON p.user_id = u.user_id
+WHERE u.email LIKE '%@university.edu'
+  AND NOT EXISTS (
+    SELECT 1 FROM profile_photo pp WHERE pp.profile_id = p.profile_id
+  );
 
