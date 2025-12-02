@@ -85,6 +85,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Skip logging 404 errors for /latest endpoint (expected when no messages exist)
+    const isLatestEndpoint = error.config?.url?.includes('/latest');
+    const is404 = error.response?.status === 404;
+    
+    if (isLatestEndpoint && is404) {
+      // Silently handle 404 for latest message endpoint - it's expected when no messages exist
+      return Promise.reject(error);
+    }
+    
     // Enhanced error logging for debugging
     const fullUrl = error.config?.baseURL + error.config?.url;
     console.error('API Error Details:', {
@@ -148,7 +157,17 @@ export const matchAPI = {
 export const messageAPI = {
   getAll: () => api.get('/api/messages').then(res => res.data),
   getByMatch: (matchId) => api.get(`/api/messages/match/${matchId}`).then(res => res.data),
+  getLatestByMatch: (matchId) => api.get(`/api/messages/match/${matchId}/latest`).then(res => res.data).catch((error) => {
+    // 404 is expected when there are no messages yet - return null silently
+    if (error.response?.status === 404) {
+      return null;
+    }
+    // For other errors, log and return null
+    console.error(`Error getting latest message for match ${matchId}:`, error);
+    return null;
+  }),
   create: (messageData) => api.post('/api/messages', messageData).then(res => res.data),
+  markAllAsRead: (matchId) => api.put(`/api/messages/match/${matchId}/read`).then(res => res.data),
 };
 
 // User Skill API

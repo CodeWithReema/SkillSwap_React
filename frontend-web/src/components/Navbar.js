@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import './Navbar.css';
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { unreadMatches, unreadMessages } = useNotifications();
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -44,12 +46,18 @@ const Navbar = () => {
             className={`navbar-link ${isActive('/matches') ? 'active' : ''}`}
           >
             Matches
+            {unreadMatches > 0 && (
+              <span className="notification-badge">{unreadMatches}</span>
+            )}
           </Link>
           <Link
             to="/messages"
             className={`navbar-link ${isActive('/messages') ? 'active' : ''}`}
           >
             Messages
+            {unreadMessages > 0 && (
+              <span className="notification-badge">{unreadMessages}</span>
+            )}
           </Link>
           <Link
             to="/profile"

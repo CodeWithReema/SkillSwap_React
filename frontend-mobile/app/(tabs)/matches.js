@@ -6,27 +6,58 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { matchAPI, userAPI } from '../../src/services/api';
+import { useNotifications } from '../../src/contexts/NotificationContext';
+import { matchAPI, userAPI, profileAPI, photoAPI } from '../../src/services/api';
 import { theme } from '../../src/styles/theme';
 
 export default function Matches() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { getCurrentUserId } = useAuth();
+  const { clearMatchNotifications } = useNotifications();
   const router = useRouter();
 
+  // Clear notifications when tab comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (clearMatchNotifications) {
+        clearMatchNotifications();
+      }
+    }, [clearMatchNotifications])
+  );
+
   useEffect(() => {
-    loadMatches();
+    // Only show loading on initial mount
+    const initialLoad = async () => {
+      setLoading(true);
+      await loadMatches();
+      setLoading(false);
+    };
+    initialLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadMatches = async () => {
+  const loadMatches = async (isRefresh = false) => {
     try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else if (loading) {
+        // Only set loading on initial load
+        setLoading(true);
+      }
+      
       const userId = getCurrentUserId();
-      const allMatches = await matchAPI.getAll();
-      const allUsers = await userAPI.getAll();
+      const [allMatches, allUsers, allProfiles] = await Promise.all([
+        matchAPI.getAll(),
+        userAPI.getAll(),
+        profileAPI.getAll(),
+      ]);
 
       const userMatches = allMatches.filter(match => {
         const user1Id = match.user1?.userId || match.user1?.id;
@@ -34,24 +65,49 @@ export default function Matches() {
         return user1Id === userId || user2Id === userId;
       });
 
-      const enrichedMatches = userMatches.map(match => {
-        const user1Id = match.user1?.userId || match.user1?.id;
-        const user2Id = match.user2?.userId || match.user2?.id;
-        const otherUserId = user1Id === userId ? user2Id : user1Id;
-        const otherUser = allUsers.find(u => u.userId === otherUserId);
+      // Enrich matches with user data and photos
+      const enrichedMatches = await Promise.all(
+        userMatches.map(async (match) => {
+          const user1Id = match.user1?.userId || match.user1?.id;
+          const user2Id = match.user2?.userId || match.user2?.id;
+          const otherUserId = user1Id === userId ? user2Id : user1Id;
+          const otherUser = allUsers.find(u => u.userId === otherUserId);
+          const otherProfile = allProfiles.find(p => p.user?.userId === otherUserId);
+          
+          // Load photo
+          let photoUrl = null;
+          if (otherProfile?.profileId) {
+            try {
+              const photos = await photoAPI.getByProfile(otherProfile.profileId);
+              const primaryPhoto = photos.find(p => p.isPrimary) || photos[0];
+              photoUrl = primaryPhoto?.photoUrl;
+            } catch (error) {
+              console.error(`Error loading photo for user ${otherUserId}:`, error);
+            }
+          }
 
-        return {
-          ...match,
-          otherUser,
-        };
-      });
+          return {
+            ...match,
+            otherUser,
+            photoUrl,
+          };
+        })
+      );
 
-      setMatches(enrichedMatches);
+      // Filter out matches where otherUser is null (user might have been deleted)
+      const validMatches = enrichedMatches.filter(match => match.otherUser != null);
+
+      setMatches(validMatches);
     } catch (error) {
       console.error('Error loading matches:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    loadMatches(true);
   };
 
   const renderMatch = ({ item }) => (
@@ -59,11 +115,15 @@ export default function Matches() {
       style={styles.matchCard}
       onPress={() => router.push(`/profile/${item.otherUser?.userId}`)}
     >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>
-          {item.otherUser?.firstName?.[0]}{item.otherUser?.lastName?.[0]}
-        </Text>
-      </View>
+      {item.photoUrl ? (
+        <Image source={{ uri: item.photoUrl }} style={styles.avatarImage} />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {item.otherUser?.firstName?.[0]}{item.otherUser?.lastName?.[0]}
+          </Text>
+        </View>
+      )}
       <View style={styles.matchInfo}>
         <Text style={styles.matchName}>
           {item.otherUser?.firstName} {item.otherUser?.lastName}
@@ -91,19 +151,21 @@ export default function Matches() {
       <Text style={styles.title}>Your Matches</Text>
       <Text style={styles.subtitle}>{matches.length} {matches.length === 1 ? 'match' : 'matches'}</Text>
       
-      {matches.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No matches yet</Text>
-          <Text style={styles.emptySubtext}>Start swiping to find your skill exchange partners!</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={matches}
-          renderItem={renderMatch}
-          keyExtractor={(item) => item.matchId?.toString()}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
+      <FlatList
+        data={matches}
+        renderItem={renderMatch}
+        keyExtractor={(item) => item.matchId?.toString()}
+        contentContainerStyle={matches.length === 0 ? styles.emptyContainer : styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No matches yet</Text>
+            <Text style={styles.emptySubtext}>Start swiping to find your skill exchange partners!</Text>
+          </View>
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
     </View>
   );
 }
@@ -145,6 +207,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accentPrimary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: theme.colors.accentPrimary,
   },
   avatarText: {
     fontSize: 24,

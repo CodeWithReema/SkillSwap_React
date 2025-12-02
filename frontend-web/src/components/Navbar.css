@@ -59,6 +59,8 @@
   border-radius: var(--radius-md);
   transition: all var(--transition-base);
   position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
 .navbar-link:hover {
@@ -120,5 +122,23 @@
   .navbar-username {
     display: none;
   }
+}
+
+.notification-badge {
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 2px solid var(--bg-secondary);
+  min-width: 20px;
 }
 

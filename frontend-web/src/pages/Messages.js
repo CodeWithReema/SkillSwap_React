@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { matchAPI, messageAPI, userAPI } from '../services/api';
 import './Messages.css';
 
@@ -10,6 +11,13 @@ const Messages = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const { getCurrentUserId } = useAuth();
+  const { clearMessageNotifications } = useNotifications();
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    // Clear message notifications when user visits messages page
+    clearMessageNotifications();
+  }, [clearMessageNotifications]);
 
   useEffect(() => {
     loadMatches();
@@ -19,6 +27,13 @@ const Messages = () => {
   useEffect(() => {
     if (selectedMatch) {
       loadMessages(selectedMatch.matchId);
+      
+      // Set up polling to refresh messages every 2 seconds
+      const interval = setInterval(() => {
+        loadMessages(selectedMatch.matchId);
+      }, 2000);
+      
+      return () => clearInterval(interval);
     }
   }, [selectedMatch]);
 
@@ -57,9 +72,20 @@ const Messages = () => {
     }
   };
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
   const loadMessages = async (matchId) => {
     try {
       const allMessages = await messageAPI.getByMatch(matchId);
+      // Backend returns messages in ascending order (oldest first)
+      // Keep as-is: oldest at top, newest at bottom
       setMessages(allMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -74,12 +100,13 @@ const Messages = () => {
       await messageAPI.create({
         match: { matchId: selectedMatch.matchId },
         sender: { userId: getCurrentUserId() },
-        content: newMessage,
+        messageContent: newMessage.trim(),
       });
       setNewMessage('');
       await loadMessages(selectedMatch.matchId);
     } catch (error) {
       console.error('Error sending message:', error);
+      alert('Failed to send message. Please try again.');
     }
   };
 
@@ -143,7 +170,7 @@ const Messages = () => {
                     const isOwn = (message.sender?.userId || message.sender?.id) === getCurrentUserId();
                     return (
                       <div key={message.messageId} className={`message ${isOwn ? 'own' : 'other'}`}>
-                        <div className="message-content">{message.content}</div>
+                        <div className="message-content">{message.messageContent || message.content}</div>
                         <div className="message-time">
                           {new Date(message.timestamp || message.sentAt).toLocaleTimeString()}
                         </div>
@@ -151,6 +178,7 @@ const Messages = () => {
                     );
                   })
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               <form onSubmit={sendMessage} className="message-input-form">
