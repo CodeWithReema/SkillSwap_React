@@ -1,6 +1,17 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const resolveApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname, port } = window.location;
+    // In CRA dev, backend is on 8080 while frontend runs on 3000
+    const targetPort = port === '3000' ? '8080' : port;
+    return `${protocol}//${hostname}${targetPort ? `:${targetPort}` : ''}`;
+  }
+  return 'http://localhost:8080';
+};
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -124,4 +135,3 @@ export const cityAPI = {
 };
 
 export default api;
-

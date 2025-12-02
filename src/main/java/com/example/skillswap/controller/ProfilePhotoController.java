@@ -56,6 +56,21 @@ public class ProfilePhotoController {
 
         String publicUrl = fileStorageService.store(file);
 
+        if (isPrimary) {
+            // Clear any existing primary photos for this profile
+            List<ProfilePhoto> existing = repo.findByProfile_ProfileId(profileId);
+            boolean changed = false;
+            for (ProfilePhoto photo : existing) {
+                if (Boolean.TRUE.equals(photo.getIsPrimary())) {
+                    photo.setIsPrimary(false);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                repo.saveAll(existing);
+            }
+        }
+
         ProfilePhoto photo = new ProfilePhoto();
         photo.setProfile(profile);
         photo.setPhotoUrl(publicUrl);

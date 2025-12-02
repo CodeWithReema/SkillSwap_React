@@ -10,6 +10,7 @@ import {
   userLanguageAPI,
   photoAPI,
   cityAPI,
+  API_BASE_URL,
 } from '../services/api';
 
 const Profile = () => {
@@ -137,7 +138,7 @@ const Profile = () => {
 
         try {
           const profilePhotos = await photoAPI.getByProfile(currentProfile.profileId);
-          setPhotos(profilePhotos);
+          setPhotos(normalizePhotos(profilePhotos));
         } catch (error) {
           console.error('Error loading photos:', error);
         }
@@ -316,7 +317,7 @@ const Profile = () => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('profileId', profile.profileId);
-    formData.append('isPrimary', photos.length === 0);
+    formData.append('isPrimary', true);
 
     try {
       await photoAPI.upload(formData);
@@ -1062,4 +1063,3 @@ const Profile = () => {
 };
 
 export default Profile;
-
