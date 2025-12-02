@@ -15,10 +15,15 @@ SkillSwap is a platform where university students and faculty can:
 
 - **Backend:** Spring Boot 3.3.4 (Java 21)
 - **Database:** PostgreSQL 16
-- **Frontend:** HTML, CSS, JavaScript (Vanilla)
+- **Frontend:** 
+  - React Web Application (see `FRONTEND.md`)
+  - React Native Mobile App with Expo 54 (see `FRONTEND.md`)
+  - Legacy: HTML, CSS, JavaScript (Vanilla) in `src/main/resources/static/`
 - **Build Tool:** Maven
 - **Containerization:** Docker & Docker Compose
 - **Additional Services:** Redis, MailHog (for email testing)
+
+> **Note:** For detailed frontend documentation, see [`FRONTEND.md`](FRONTEND.md)
 
 ## 📋 Prerequisites
 
@@ -147,7 +152,7 @@ SkillSwapSpringbootApp/
 │   │   │   ├── config/          # Configuration classes (CORS, etc.)
 │   │   │   └── SkillswapApplication.java
 │   │   └── resources/
-│   │       ├── static/          # Frontend files (HTML, CSS, JS)
+│   │       ├── static/          # Legacy frontend files (HTML, CSS, JS)
 │   │       │   ├── index.html
 │   │       │   ├── discover.html
 │   │       │   ├── profile.html
@@ -160,12 +165,23 @@ SkillSwapSpringbootApp/
 │   │       │   └── js/
 │   │       ├── schema.sql       # Database schema
 │   │       ├── application.properties
-│   │       └── migration-add-profile-fields.sql
+│   │       └── migration-*.sql  # Database migration scripts
 │   └── test/                    # Test files
+├── frontend-web/                # React web application
+│   ├── src/                     # React source code
+│   └── package.json
+├── frontend-mobile/             # React Native mobile app (Expo)
+│   ├── app/                     # Expo Router pages
+│   ├── src/                     # React Native source code
+│   └── package.json
 ├── docker-compose.yml           # Docker services configuration
 ├── Dockerfile                   # Spring Boot app Docker image
 ├── pom.xml                      # Maven dependencies
-└── README.md                    # This file
+├── README.md                    # This file
+├── FRONTEND.md                  # Frontend documentation
+├── TROUBLESHOOTING.md           # Troubleshooting guide
+├── CHANGELOG.md                 # Update history
+└── SETUP_GUIDE.md               # Quick setup guide
 ```
 
 ## 🗄️ Database Schema
@@ -474,11 +490,20 @@ docker-compose down -v             # Stop and remove volumes (⚠️ deletes dat
 ## 📞 Support
 
 If you encounter issues:
-1. Check the Troubleshooting section above
-2. Check the console/terminal for error messages
-3. Verify all prerequisites are installed
-4. Ensure the database container is running
-5. Try cleaning and rebuilding: `.\mvnw.cmd clean compile`
+1. Check the **Troubleshooting section** above
+2. Check [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) for detailed troubleshooting guides
+3. Check [`FRONTEND.md`](FRONTEND.md) for frontend-specific documentation
+4. Check the console/terminal for error messages
+5. Verify all prerequisites are installed
+6. Ensure the database container is running
+7. Try cleaning and rebuilding: `.\mvnw.cmd clean compile`
+
+## 📚 Additional Documentation
+
+- **[FRONTEND.md](FRONTEND.md)** - Complete frontend documentation (web & mobile)
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Comprehensive troubleshooting guide
+- **[CHANGELOG.md](CHANGELOG.md)** - Update history and changelog
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Quick setup guide for team members
 
 ## 📄 License
 
