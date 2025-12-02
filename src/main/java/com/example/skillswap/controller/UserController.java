@@ -3,7 +3,9 @@ package com.example.skillswap.controller;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
+import com.example.skillswap.model.Profile;
 import com.example.skillswap.model.User;
+import com.example.skillswap.repository.ProfileRepository;
 import com.example.skillswap.repository.UserRepository;
 
 @RestController
@@ -11,9 +13,11 @@ import com.example.skillswap.repository.UserRepository;
 public class UserController {
 
     private final UserRepository repo;
+    private final ProfileRepository profileRepository;
 
-    public UserController(UserRepository repo) {
+    public UserController(UserRepository repo, ProfileRepository profileRepository) {
         this.repo = repo;
+        this.profileRepository = profileRepository;
     }
 
     @GetMapping
@@ -23,7 +27,16 @@ public class UserController {
 
     @PostMapping
     public User addUser(@RequestBody User user) {
-        return repo.save(user);
+        User saved = repo.save(user);
+
+        // Ensure every user has a profile immediately after signup
+        if (profileRepository.findByUserUserId(saved.getUserId()) == null) {
+            Profile profile = new Profile();
+            profile.setUser(saved);
+            profileRepository.save(profile);
+        }
+
+        return saved;
     }
 
     @PutMapping("/{id}")

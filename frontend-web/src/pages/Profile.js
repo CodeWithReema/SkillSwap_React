@@ -9,6 +9,7 @@ import {
   userLanguageAPI,
   photoAPI,
   cityAPI,
+  API_BASE_URL,
 } from '../services/api';
 import './Profile.css';
 
@@ -46,10 +47,36 @@ const Profile = () => {
   const [locationStatus, setLocationStatus] = useState('');
   const [locationDebounceTimer, setLocationDebounceTimer] = useState(null);
 
+  const toAbsoluteUrl = (url) => {
+    if (!url) return '';
+    try {
+      const base = API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+      return new URL(url, base).toString();
+    } catch (e) {
+      return url;
+    }
+  };
+
   useEffect(() => {
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const normalizePhotos = (photoList = []) => {
+    return photoList
+      .map(photo => ({
+        ...photo,
+        photoUrl: toAbsoluteUrl(photo.photoUrl),
+        isPrimary: Boolean(photo.isPrimary),
+      }))
+      .sort((a, b) => {
+        // Primary first, then newest upload
+        if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+        const aDate = a.uploadedAt ? new Date(a.uploadedAt) : 0;
+        const bDate = b.uploadedAt ? new Date(b.uploadedAt) : 0;
+        return bDate - aDate;
+      });
+  };
 
   const loadProfile = async () => {
     try {
@@ -103,7 +130,7 @@ const Profile = () => {
         // Load photos
         try {
           const profilePhotos = await photoAPI.getByProfile(currentProfile.profileId);
-          setPhotos(profilePhotos);
+          setPhotos(normalizePhotos(profilePhotos));
         } catch (error) {
           console.error('Error loading photos:', error);
         }
@@ -291,7 +318,7 @@ const Profile = () => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('profileId', profile.profileId);
-    formData.append('isPrimary', photos.length === 0);
+    formData.append('isPrimary', true);
 
     try {
       await photoAPI.upload(formData);
@@ -945,4 +972,3 @@ const Profile = () => {
 };
 
 export default Profile;
-
