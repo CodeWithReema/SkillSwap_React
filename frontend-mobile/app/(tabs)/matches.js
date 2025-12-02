@@ -12,7 +12,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useNotifications } from '../../src/contexts/NotificationContext';
-import { matchAPI, userAPI, profileAPI, photoAPI } from '../../src/services/api';
+import api, { matchAPI, userAPI, profileAPI, photoAPI } from '../../src/services/api';
 import { theme } from '../../src/styles/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -43,6 +43,23 @@ export default function Matches() {
     initialLoad();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Convert relative photo URLs to absolute URLs
+  const toAbsoluteUrl = (url) => {
+    if (!url) return null;
+    try {
+      // If already absolute URL, return as-is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      // Get API base URL from axios instance
+      const baseURL = api.defaults?.baseURL || 'http://localhost:8080';
+      return url.startsWith('/') ? `${baseURL}${url}` : `${baseURL}/${url}`;
+    } catch (e) {
+      console.error('Error converting photo URL:', e, url);
+      return url;
+    }
+  };
 
   const loadMatches = async (isRefresh = false) => {
     try {
@@ -78,7 +95,7 @@ export default function Matches() {
             try {
               const photos = await photoAPI.getByProfile(otherProfile.profileId);
               const primaryPhoto = photos.find(p => p.isPrimary) || photos[0];
-              photoUrl = primaryPhoto?.photoUrl;
+              photoUrl = primaryPhoto?.photoUrl ? toAbsoluteUrl(primaryPhoto.photoUrl) : null;
             } catch (error) {
               console.error(`Error loading photo for user ${otherUserId}:`, error);
             }

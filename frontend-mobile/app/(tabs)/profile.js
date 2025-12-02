@@ -1289,7 +1289,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   input: {
-    backgroundColor: theme.colors.bgPrimary, // More opaque background for visibility
+    backgroundColor: theme.colors.bgSecondary, // Lighter background for better text contrast
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     borderRadius: theme.borderRadius.md,
