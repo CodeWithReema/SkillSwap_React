@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
   Modal,
+  Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -39,6 +40,7 @@ export default function Profile() {
     major: '',
     year: '',
     location: '',
+    showLocation: false,
     careerGoals: '',
     availability: '',
     career: '',
@@ -61,6 +63,7 @@ export default function Profile() {
   const [showAddInterest, setShowAddInterest] = useState(false);
   const [showAddOrg, setShowAddOrg] = useState(false);
   const [showAddLanguage, setShowAddLanguage] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
   
   // New item states
   const [newSkill, setNewSkill] = useState({ skillName: '', skillLevel: 'Intermediate', offering: false, seeking: false });
@@ -105,6 +108,7 @@ export default function Profile() {
           major: profile.major || '',
           year: profile.year || '',
           location: profile.location || '',
+          showLocation: profile.showLocation || false,
           careerGoals: profile.careerGoals || '',
           availability: profile.availability || '',
           career: profile.career || '',
@@ -279,6 +283,7 @@ export default function Profile() {
           latitude,
           longitude,
           location: locationString,
+          showLocation: formData.showLocation,
         });
         setLocationStatus('Location saved successfully!');
         setTimeout(() => setLocationStatus(''), 3000);
@@ -523,13 +528,15 @@ export default function Profile() {
             </View>
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <Text style={styles.label}>Year</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.year}
-                onChangeText={(value) => setFormData(prev => ({ ...prev, year: value }))}
-                placeholder="e.g., Senior"
-                placeholderTextColor={theme.colors.textMuted}
-              />
+              <TouchableOpacity
+                style={styles.yearPickerButton}
+                onPress={() => setShowYearPicker(true)}
+              >
+                <Text style={[styles.yearPickerText, !formData.year && styles.yearPickerPlaceholder]}>
+                  {formData.year || 'Select Year'}
+                </Text>
+                <Text style={styles.yearPickerArrow}>▼</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -553,6 +560,15 @@ export default function Profile() {
             {locationStatus ? (
               <Text style={styles.locationStatus}>{locationStatus}</Text>
             ) : null}
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>Show my location for matching</Text>
+              <Switch
+                value={formData.showLocation}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, showLocation: value }))}
+                trackColor={{ false: theme.colors.bgSecondary, true: theme.colors.accentPrimary }}
+                thumbColor={formData.showLocation ? '#fff' : theme.colors.textSecondary}
+              />
+            </View>
           </View>
         </View>
 
@@ -593,7 +609,7 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
           {skills.length > 0 ? (
-            <View style={styles.itemsList}>
+            <View key="skills-list" style={styles.itemsList}>
               {skills.map((skill) => (
                 <View key={skill.userSkillId} style={styles.itemRow}>
                   <View style={styles.itemInfo}>
@@ -628,7 +644,7 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
           {interests.length > 0 ? (
-            <View style={styles.itemsList}>
+            <View key="interests-list" style={styles.itemsList}>
               {interests.map((interest) => (
                 <View key={interest.userInterestId} style={styles.itemRow}>
                   <View style={styles.itemInfo}>
@@ -663,7 +679,7 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
           {organizations.length > 0 ? (
-            <View style={styles.itemsList}>
+            <View key="organizations-list" style={styles.itemsList}>
               {organizations.map((org) => (
                 <View key={org.userOrganizationId} style={styles.itemRow}>
                   <View style={styles.itemInfo}>
@@ -698,7 +714,7 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
           {languages.length > 0 ? (
-            <View style={styles.itemsList}>
+            <View key="languages-list" style={styles.itemsList}>
               {languages.map((lang) => (
                 <View key={lang.userLanguageId} style={styles.itemRow}>
                   <View style={styles.itemInfo}>
@@ -1045,6 +1061,46 @@ export default function Profile() {
           </View>
         </View>
       </Modal>
+
+      {/* Year Picker Modal */}
+      <Modal
+        visible={showYearPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowYearPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Year</Text>
+            {['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Faculty'].map((year) => (
+              <TouchableOpacity
+                key={year}
+                style={[
+                  styles.yearOption,
+                  formData.year === year && styles.yearOptionSelected
+                ]}
+                onPress={() => {
+                  setFormData(prev => ({ ...prev, year }));
+                  setShowYearPicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.yearOptionText,
+                  formData.year === year && styles.yearOptionTextSelected
+                ]}>
+                  {year}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonCancel]}
+              onPress={() => setShowYearPicker(false)}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1099,6 +1155,48 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 16, // Prevents zoom on iOS
   },
+  yearPickerButton: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  yearPickerText: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+  },
+  yearPickerPlaceholder: {
+    color: theme.colors.textMuted,
+  },
+  yearPickerArrow: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+  },
+  yearOption: {
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  yearOptionSelected: {
+    backgroundColor: theme.colors.accentPrimary,
+    borderColor: theme.colors.accentPrimary,
+  },
+  yearOptionText: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  yearOptionTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
   textArea: {
     minHeight: 100,
     textAlignVertical: 'top',
@@ -1150,6 +1248,19 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
     fontStyle: 'italic',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  switchLabel: {
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    flex: 1,
+    marginRight: theme.spacing.md,
   },
   photoSection: {
     alignItems: 'center',

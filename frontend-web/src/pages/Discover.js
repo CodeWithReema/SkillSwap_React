@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { userAPI, profileAPI, swipeAPI, matchAPI } from '../services/api';
+import { userAPI, profileAPI, swipeAPI, matchAPI, photoAPI } from '../services/api';
 import DiscoverCard from '../components/DiscoverCard';
 import './Discover.css';
 
@@ -52,20 +52,36 @@ const Discover = () => {
 
       const swipedUserIds = new Set(swipes.map(s => s.swipee?.userId || s.swipee?.id));
 
-      // Merge user and profile data
-      let filteredUsers = allUsers
-        .filter(user => user.userId !== currentUserId && !swipedUserIds.has(user.userId))
-        .map(user => {
-          const profile = allProfiles.find(p => p.user?.userId === user.userId);
-          return {
-            ...user,
-            profile: profile,
-            major: profile?.major || '',
-            location: profile?.location || user.location || '',
-            latitude: profile?.latitude || user.latitude,
-            longitude: profile?.longitude || user.longitude,
-          };
-        });
+      // Merge user and profile data and load photos
+      let filteredUsers = await Promise.all(
+        allUsers
+          .filter(user => user.userId !== currentUserId && !swipedUserIds.has(user.userId))
+          .map(async (user) => {
+            const profile = allProfiles.find(p => p.user?.userId === user.userId);
+            let photoUrl = null;
+            
+            // Load primary photo if profile exists
+            if (profile?.profileId) {
+              try {
+                const photos = await photoAPI.getByProfile(profile.profileId);
+                const primaryPhoto = photos.find(p => p.isPrimary) || photos[0];
+                photoUrl = primaryPhoto?.photoUrl;
+              } catch (error) {
+                console.error(`Error loading photo for user ${user.userId}:`, error);
+              }
+            }
+            
+            return {
+              ...user,
+              profile: profile,
+              major: profile?.major || '',
+              location: profile?.location || user.location || '',
+              latitude: profile?.latitude || user.latitude,
+              longitude: profile?.longitude || user.longitude,
+              photoUrl: photoUrl,
+            };
+          })
+      );
 
       // Calculate distances for all users if current user has location
       const currentUser = allUsers.find(u => u.userId === currentUserId);
