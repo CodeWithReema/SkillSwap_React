@@ -256,10 +256,12 @@ docker-compose down -v            # Stop and remove volumes (⚠️ deletes data
 ## 🆘 Need Help?
 
 1. **Check the full README.md** for detailed information
-2. **Check console/terminal** for error messages
-3. **Verify prerequisites** are installed correctly
-4. **Ensure Docker Desktop is running**
-5. **Try cleaning and rebuilding:** `.\mvnw.cmd clean compile`
+2. **Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)** for detailed troubleshooting guides
+3. **Check [FRONTEND.md](FRONTEND.md)** for frontend-specific documentation
+4. **Check console/terminal** for error messages
+5. **Verify prerequisites** are installed correctly
+6. **Ensure Docker Desktop is running**
+7. **Try cleaning and rebuilding:** `.\mvnw.cmd clean compile`
 
 ---
 
